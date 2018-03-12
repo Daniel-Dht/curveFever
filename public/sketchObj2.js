@@ -25,10 +25,9 @@ function draw() {
 	player1.displayTail();
 	//player1.holeManager();
 	//player1.deathManager();	
+	console.log(player1.tempDifference);
 	emitTail();
-
 	socket.on('tailTab', drawTail);
-
 
 	if(mouseIsPressed ) {
 		console.log(frameCount);
@@ -40,15 +39,26 @@ function draw() {
 	}
 }
 
+// function copie() {
+// 	for (var i = 0; i < player1.tempDifference.length; i++) {
+// 		append(tailCopie,player1.tempDifference[i]);
+// 	}
+// }
+
 function emitTail() {
-	var data = player1.tail ;
+	var data = player1.tempDifference ;
+	player1.tempDifference = [];
 	socket.emit('tailTab', data);
 }
 
 function drawTail(data) {
-	for(k = 0 ; k<data.length-1  ; k++){ // puis on affiche la tête
+	for (var i = 0; i < data.length; i++) {
+		append(tailCopie,data[i]);
+	}
+	console.log("ok :"+player1.tempDifference);
+	for(k = 0 ; k<tailCopie.length-1  ; k++){ // puis on affiche la tête
 		stroke(0,0,255);	
-	 	line(data[k][0],data[k][1],data[k+1][0],data[k+1][1]);
+	 	line(tailCopie[k][0],tailCopie[k][1],tailCopie[k+1][0],tailCopie[k+1][1]);
 	}
 }
 
@@ -75,7 +85,7 @@ function Snake() {
 	this.sizeHead = 4; // taille de la partie qu'on dessine avec la qualité max
 	this.thickness = 8; // epaisseur de serpent
 
-
+	this.tempDifference = [];
 
 	this.controlKey = function() {
 		if (keyIsDown(37)) {  // left ARROW
@@ -90,6 +100,8 @@ function Snake() {
 	}
 
 	this.shiftHead = function() {
+		
+
 		this.x += this.vect.x ;
 		this.y += this.vect.y ;
 
@@ -98,6 +110,7 @@ function Snake() {
 
 		if(this.goTail) { /// TAIL
 			append(this.tail, [this.x, this.y]);
+			append(this.tempDifference, [this.x, this.y]);
 			this.goTail = false;
 			this.lineScaleCount = this.lineScale ;
 			//console.log(this.tail.length);
@@ -119,7 +132,7 @@ function Snake() {
 					this.tail.pop();
 				}
 				append(this.tail,false);
-
+				append(this.tempDifference,false);
 				this.goHole=false;
 				this.minSpaceBetweenHoles =50;
 			}	
@@ -149,10 +162,7 @@ function Snake() {
 			for(k = 0 ; k<this.tail.length-1  ; k++){ // puis on affiche la tête
 				stroke(242,100,80);	
 				line(this.tail[k][0],this.tail[k][1],this.tail[k+1][0],this.tail[k+1][1]);	
-				
-				// fill(0);
-				// noStroke();
-				// ellipse(this.tail[k][0],this.tail[k][1],this.thickness/2,this.thickness/2);
+			
 			}
 		}
 	}
@@ -167,6 +177,8 @@ function Snake() {
 			this.tail[this.tail.length-1][0] = width ;
 			append(this.tail, false);
 			append(this.tail, [ 0 , this.tail[this.tail.length-2][1] ]);
+			append(this.tempDifference, false);
+			append(this.tempDifference, [ 0 , this.tail[this.tail.length-2][1] ]);
 
 			this.x = 0;
 		}  
@@ -176,7 +188,8 @@ function Snake() {
 			this.tail[this.tail.length-1][0] = 0 ;
 			append(this.tail, false);
 			append(this.tail, [ width , this.tail[this.tail.length-2][1] ]);
-
+			append(this.tempDifference, false);
+			append(this.tempDifference, [ width , this.tail[this.tail.length-2][1] ]);
 			this.x = width;
 		}
 		if( this.y > height) {
@@ -185,6 +198,8 @@ function Snake() {
 			this.tail[this.tail.length-1][1] = height ;
 			append(this.tail, false);
 			append(this.tail, [ this.tail[this.tail.length-2][0] ,0]);
+			append(this.tempDifference, false);
+			append(this.tempDifference, [ this.tail[this.tail.length-2][0] ,0]);
 
 			this.y = 0;
 		}
@@ -194,17 +209,12 @@ function Snake() {
 			this.tail[this.tail.length-1][1] = 0 ;
 			append(this.tail, false);
 			append(this.tail, [ this.tail[this.tail.length-2][0],height ]);
-
+			append(this.tempDifference, false);
+			append(this.tempDifference, [ this.tail[this.tail.length-2][0],height ]);
 			this.y = height;
 		}
 	}
 
-	this.preventLineDrawing = function() {
-		for(k=0 ; k<this.lineScale; k++) {
-			append(this.tail,false);
-			append(tailCopie,false);
-		} // fonctionne depuis borderManager
-	}
 
 	this.deathManager = function() {
 		for(k=0 ; k<this.tail.length-this.sizeHead-this.thickness; k ++) {

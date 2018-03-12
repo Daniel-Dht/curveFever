@@ -18,7 +18,7 @@ io.sockets.on('connection', function (socket) {
     // })
 
     socket.on('tailTab', function(data) {
-    	//console.log(data);
+    	console.log(data);
     	socket.broadcast.emit('tailTab', data);
     })
 
