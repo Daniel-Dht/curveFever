@@ -5,67 +5,88 @@ var socket;
 
 var tailCopie = [] ;
 
+var players = [] ;
+
+var  temp = 0; // trouver comment s'en passer si possible
+
 function setup() {
 	createCanvas(600, 400);
 	background(200);
 	socket = io.connect();
 	
-
 	player1 = new Snake();
-	// player2 = new Snake();
-	// player2.init(120,120);
+	socket.emit('newPlayer');
+	//socket.on('user connected',console.log("une autre personne s'est connectée"));
 }
 
 function draw() {
 	background(200);
-	//socket.on('mouse', newDrawing);
+
 	player1.controlKey();
 	player1.shiftHead();
 	player1.borderManager();
 	player1.displayTail();
-	//player1.holeManager();
-	//player1.deathManager();	
-	console.log(player1.tempDifference);
+	
+	player1.holeManager();
+	player1.deathManager();	
+
+	//console.log(player1.tempDifference);
+	drawTailOfOtherPlayer() ;
+
 	emitTail();
-	socket.on('tailTab', drawTail);
+
+	socket.on('tailTabReceived', treatReceivedData);
+	
 
 	if(mouseIsPressed ) {
 		console.log(frameCount);
 		noLoop();
 		console.log("finish (taille du tableau : "+player1.tail.length+")");
-		// for (var i = player1.tail.length-20; i < player1.tail.length; i++) {
-		// 	console.log(player1.tail[i]);
-		// }
+		for (var i = player1.tail.length-100; i < player1.tail.length; i++) {
+			console.log(player1.tail[i]);
+		}
 	}
+	//frameRate(3);
+	//console.log(frameCount);
 }
 
-// function copie() {
-// 	for (var i = 0; i < player1.tempDifference.length; i++) {
-// 		append(tailCopie,player1.tempDifference[i]);
-// 	}
-// }
+
+function drawTailOfOtherPlayer() {
+	if(tailCopie.length>1 ){
+		for(k = 0 ; k<tailCopie.length-1  ; k++){ // puis on affiche la tête
+			stroke(0,0,255);	
+		 	line(tailCopie[k][0],tailCopie[k][1],tailCopie[k+1][0],tailCopie[k+1][1]);
+		}	
+	}
+}
 
 function emitTail() {
-	var data = player1.tempDifference ;
-	player1.tempDifference = [];
-	socket.emit('tailTab', data);
+	var data = player1.tempDifference ;   // trouver comment se passer de ça...
+	if( player1.tempDifference.length>0){
+		socket.emit('tailTabEmit', data);
+		//console.log("emit :" + frameCount);
+		player1.tempDifference = []; // on vide les données déja envoyées
+		//console.log("apres : "+player1.tempDifference+ "fin");
+	}
+	
 }
 
-function drawTail(data) {
-	for (var i = 0; i < data.length; i++) {
-		append(tailCopie,data[i]);
-	}
-	console.log("ok :"+player1.tempDifference);
-	for(k = 0 ; k<tailCopie.length-1  ; k++){ // puis on affiche la tête
-		stroke(0,0,255);	
-	 	line(tailCopie[k][0],tailCopie[k][1],tailCopie[k+1][0],tailCopie[k+1][1]);
+function treatReceivedData(data) {
+	
+	if( data !=temp) {
+		temp = data ;
+		for (var i = 0; i < data.length; i++) {
+			append(tailCopie,data[i]);
+		}
+		//console.log("received :" + data);
+		//console.log("ok :"+player1.tempDifference);
 	}
 }
 
 function Snake() {
 
-	this.x = 150;
-	this.y = 100;
+	this.x = random(width);;
+	this.y = random(height);
 	this.v =   2;
 
 	this.vect = createVector(1, 0); // vecteur vitesse
@@ -76,11 +97,13 @@ function Snake() {
 	this.goTail = true;
 	this.angle =  0.05;
 
-	this.goHole = true ;
-	this.hole = 2;
+	this.goNewHole = true ;
+	this.goDrawHole = false ;
+	this.holeSize = 12;
+	this.hole = 0;
 	this.minSpaceBetweenHoles = 50 ;
 
-	this.lineScale = 6; //1 = min = meilleur qualité, plus on augmente moins c'est quali
+	this.lineScale = 3; //1 = min = meilleur qualité, plus on augmente moins c'est quali
 	this.lineScaleCount = this.lineScale;
 	this.sizeHead = 4; // taille de la partie qu'on dessine avec la qualité max
 	this.thickness = 8; // epaisseur de serpent
@@ -109,8 +132,8 @@ function Snake() {
 		if(this.head.length>this.sizeHead ) this.head = subset(this.head,1,this.sizeHead-1);
 
 		if(this.goTail) { /// TAIL
-			append(this.tail, [this.x, this.y]);
-			append(this.tempDifference, [this.x, this.y]);
+			if( !this.goDrawHole ) append(this.tail, [this.x, this.y]);
+			if( !this.goDrawHole ) append(this.tempDifference, [this.x, this.y]);
 			this.goTail = false;
 			this.lineScaleCount = this.lineScale ;
 			//console.log(this.tail.length);
@@ -125,21 +148,29 @@ function Snake() {
 
 	this.holeManager = function() {
 
-		if(this.goHole && this.tail.length > (this.sizeHead + this.hole) ){
+		if(this.goNewHole && this.tail.length > (this.sizeHead + this.hole) ){
 			if (random(1)>0.990 ) {
 				//on fait le trou juste apèes la tête du serpent :
-				for (var i = 0; i < this.hole; i++) {
-					this.tail.pop();
-				}
+				// for (var i = 0; i < this.hole; i++) {
+				// 	this.tail.pop();
+				// }
+				this.goDrawHole = true ;
+				this.hole = this.holeSize ;
+
 				append(this.tail,false);
 				append(this.tempDifference,false);
-				this.goHole=false;
+
+				this.goNewHole=false;
 				this.minSpaceBetweenHoles =50;
 			}	
 		} 
-		if(!this.goHole){
+		if(this.goDrawHole){
+			this.hole -=1;
+			if(this.hole == 0) this.goDrawHole = false;
+		}		
+		if(!this.goNewHole){
 			this.minSpaceBetweenHoles -=1;
-			if(this.minSpaceBetweenHoles == 0) this.goHole = true;
+			if(this.minSpaceBetweenHoles == 0) this.goNewHole = true;
 		}
 	}
 
@@ -153,9 +184,6 @@ function Snake() {
 
 			for(k = 0 ; k<this.head.length-1 ; k++){ // on affiche la tête
 				line(this.head[k][0], this.head[k][1], this.head[k+1][0], this.head[k+1][1]);
-				if(abs(this.head[k][0]-this.head[k+1][0])>width/2){
-					console.log(this.head);
-				}
 			}
 			
 			
@@ -178,8 +206,8 @@ function Snake() {
 			append(this.tail, false);
 			append(this.tail, [ 0 , this.tail[this.tail.length-2][1] ]);
 			append(this.tempDifference, false);
-			append(this.tempDifference, [ 0 , this.tail[this.tail.length-2][1] ]);
-
+			append(this.tempDifference, [ 0 , this.tail[this.tail.length-3][1] ]);
+			//console.log(this.tail);
 			this.x = 0;
 		}  
 		if( this.x < 0) {
@@ -189,7 +217,7 @@ function Snake() {
 			append(this.tail, false);
 			append(this.tail, [ width , this.tail[this.tail.length-2][1] ]);
 			append(this.tempDifference, false);
-			append(this.tempDifference, [ width , this.tail[this.tail.length-2][1] ]);
+			append(this.tempDifference, [ width , this.tail[this.tail.length-3][1] ]);
 			this.x = width;
 		}
 		if( this.y > height) {
@@ -199,7 +227,7 @@ function Snake() {
 			append(this.tail, false);
 			append(this.tail, [ this.tail[this.tail.length-2][0] ,0]);
 			append(this.tempDifference, false);
-			append(this.tempDifference, [ this.tail[this.tail.length-2][0] ,0]);
+			append(this.tempDifference, [ this.tail[this.tail.length-3][0] ,0]);
 
 			this.y = 0;
 		}
@@ -210,18 +238,22 @@ function Snake() {
 			append(this.tail, false);
 			append(this.tail, [ this.tail[this.tail.length-2][0],height ]);
 			append(this.tempDifference, false);
-			append(this.tempDifference, [ this.tail[this.tail.length-2][0],height ]);
+			append(this.tempDifference, [ this.tail[this.tail.length-3][0],height ]);
 			this.y = height;
 		}
 	}
 
 
 	this.deathManager = function() {
-		for(k=0 ; k<this.tail.length-this.sizeHead-this.thickness; k ++) {
-			var mindist = this.thickness/2-0.5;
-			
+		var mindist = this.thickness/2-0.5;
+		for(k=0 ; k<this.tail.length-this.sizeHead-this.thickness; k ++) {					
 			if(  this.tail[k] && dist(this.x,this.y,this.tail[k][0],this.tail[k][1]) < mindist  ) {
-
+				this.vect.setMag(0); // le serpent n'avance plus
+			}
+		}
+		
+		for(k=0 ; k<tailCopie.length-this.sizeHead-this.thickness; k ++) {					
+			if(  tailCopie[k] && dist(this.x,this.y,tailCopie[k][0],tailCopie[k][1]) < mindist  ) {
 				this.vect.setMag(0); // le serpent n'avance plus
 			}
 		}
