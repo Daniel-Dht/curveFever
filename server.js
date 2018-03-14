@@ -9,17 +9,23 @@ app.use(express.static('public'));
 var socket = require('socket.io');
 var io = socket(server);
 
+var players = [] ; // liste des joueurs
+
+
+
 
 
 io.sockets.on('connection', function (socket) { 
     console.log("We have a new client: " + socket.id);
 	socket.broadcast.emit('newPlayer', socket.id);
 
+
     // socket.on('mouse', function(data) {
     // 	console.log(data);
     // 	socket.broadcast.emit('mouse', data);
     // })
-
+    
+    
     socket.on('tailTabEmit', function(data) {
     	//console.log(data);
     	socket.broadcast.emit('tailTabReceived', data);

@@ -1,158 +1,89 @@
-var x =300; // coordonnées de la t^te du serpent
-var y =50; 
 
-var v = 2; // vitesse du snake ;
-var tail = [] ; // liste des position de la t^te du serpent
-var vect1; // veteur directeur de la tête du snake
-var angle = 0.05; // angle de rotation
-
-var hole = 12; // si hole =10, v=2, la taille des trous sera de 20 pixels
-var minSpaceBetweenHoles = 50 ;//
-var goHole = true;
-
-var lineScale = 3; //1 = min = meilleur qualité, plus on augmente moins c'est quali
-var sizeHead = 10; // taille de la partie qu'on dessine avec la qualité max
-var thickness = 8; // epaisseur de serpent
+var player1 ; // Vous même
 
 var socket;
 
+var tailCopie = [] ;
+
+var players = [] ;
+
+var  temp = 0; // trouver comment s'en passer si possible
+
 function setup() {
 	createCanvas(600, 400);
-	background(100);
-	//socket = io.connect();
+	background(200);
+	socket = io.connect();
 	
-	vect1 = createVector(1, 0); // vecteur vitesse
-	vect1.setMag(v);
-	
-
+	player1 = new Snake();
+	socket.emit('newPlayer');
+	//socket.on('user connected',console.log("une autre personne s'est connectée"));
 }
 
 function draw() {
 	background(200);
 
-	// socket.on('mouse', function(data) { // réaction à la receptions d'un signal
-	// 	//console.log("ok dam");
-	// 	fill(0,0,255);
-	// 	stroke(255);
-	// 	ellipse(data.x,data.y,20,20);
-	// 	}
-	// );
+	player1.controlKey();
+	player1.shiftHead();
+	player1.borderManager();
+	player1.displayTail();
 	
-	//ellipse(100,100,50,50);
-	controlKey();
-	shiftHead();
-	borderManager();
-	displayTail();
-	holeManager();
-	deathManager();
-}
+	player1.holeManager();
+	player1.deathManager();	
 
-// function mouseDragged() {
-//   // Make a little object with mouseX and mouseY
-//   var data = {
-//     x: mouseX,
-//     y: mouseY
-//   };
-//   // Send that object to the socket
-//   socket.emit('mouse',data);
-// }
+	//console.log(player1.tempDifference);
+	drawTailOfOtherPlayer() ;
 
-function controlKey() {
-	if (keyIsDown(37)) {  // left ARROW
-		vect1.rotate(-angle);
-  } 
-  else if (keyIsDown(39)) {  // right ARROW
-		vect1.rotate(angle);
-  }
-  // if (keyPressed(13)){
-  //   x += 20 ;
-	 // y += 20;
-  // 	vect1.setMag(v);
-  // } 
-  return false; // prevent default
-}
+	emitTail();
 
-function shiftHead() {
-	append(tail,[x,y]);
-	x += vect1.x ;
-	y += vect1.y ;
-
-}
-
-function holeManager() {
+	socket.on('tailTabReceived', treatReceivedData);
 	
-	if(goHole && tail.length > sizeHead ){
-		if (random(1)>0.990 ) {
-			for(var k = tail.length-sizeHead-hole  ; k<tail.length-sizeHead-1  ; k+=1){ // on fait le trou juste apèes la tête du serpent
-					tail[k] = false;
-			}
-			goHole=false;
-			minSpaceBetweenHoles =50;
+
+	if(mouseIsPressed ) {
+		console.log(frameCount);
+		noLoop();
+		console.log("finish (taille du tableau : "+player1.tail.length+")");
+		for (var i = player1.tail.length-100; i < player1.tail.length; i++) {
+			//console.log(player1.tail[i]);
 		}
-	} 
-	if(!goHole){
-			minSpaceBetweenHoles -=1;
-			if(minSpaceBetweenHoles == 0) goHole = true;
 	}
+	//frameRate(3);
+	//console.log(frameCount);
 }
 
-function displayTail() { // la tête est de qualité, la queue moins pour performance and smooth driving
-	strokeWeight(thickness);
-	stroke(242,100,80);			
 
-	if(tail.length > sizeHead + lineScale){ // si  la queue est plus grande que la tête
-	
-		for(k = 1 ; k<tail.length-lineScale-sizeHead  ; k+=lineScale+1){ // on affiche la queue
-			line(tail[k][0],tail[k][1],tail[k+lineScale][0],tail[k+lineScale][1]);	
-		}
-		for(k = tail.length-lineScale-sizeHead  ; k<tail.length-1  ; k+=2){ // puis on affiche la tête
-			line(tail[k][0],tail[k][1],tail[k+1][0],tail[k+1][1]);	
+function drawTailOfOtherPlayer() {
+	if(tailCopie.length>1 ){
+		for(k = 0 ; k<tailCopie.length-1  ; k++){ // puis on affiche la tête
+			stroke(0,0,255);	
+		 	line(tailCopie[k][0],tailCopie[k][1],tailCopie[k+1][0],tailCopie[k+1][1]);
 		}	
 	}
-	else { // on déssine la queue et la tête de la même manière si le serpent est trop petit
-		for(k = 1 ; k<tail.length-lineScale-1  ; k+=2){
-			line(tail[k][0],tail[k][1],tail[k+1][0],tail[k+1][1]);	
-		}		
-	}
-
-	//console.log(tail.length);
 }
 
-function borderManager() {
-	if( x > width){
-		preventLineDrawing();
-		x = 0;
-	}  
-	if( x < 0) {
-		preventLineDrawing();
-		x = width;
-	}
-	if( y > height) {
-		preventLineDrawing()	;
-		y = 0;
-	}
-	if( y < 0) {
-    preventLineDrawing();
-		y = height;
-	}
+function emitTail() {
+	var data = player1.tempDifference ;   // trouver comment se passer de ça...
+	if( player1.tempDifference.length>0){
+		socket.emit('tailTabEmit', data);
+		//console.log("emit :" + frameCount);
+		player1.tempDifference = []; // on vide les données déja envoyées
+		//console.log("apres : "+player1.tempDifference+ "fin");
+	}	
 }
 
-function preventLineDrawing() {
-	for(k=0 ; k<lineScale; k++) {
-		append(tail,false);
-	} // fonctionne depuis borderManager
-}
-
-function deathManager() {
-	for(k=0 ; k<tail.length-sizeHead-thickness; k ++) {
-		var mindist = thickness-3;
-		
-		if(  tail[k] && dist(x,y,tail[k][0],tail[k][1]) < mindist  ) {
-
-			vect1.setMag(0);
+function treatReceivedData(data) {
+	
+	if( data !=temp) {
+		temp = data ;
+		for (var i = 0; i < data.length; i++) {
+			append(tailCopie,data[i]);
 		}
+		//console.log("received :" + data);
+		//console.log("ok :"+player1.tempDifference);
 	}
 }
+
+
+
 
 
 
