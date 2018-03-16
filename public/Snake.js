@@ -18,7 +18,7 @@ function Snake() {
 	this.hole = 0;
 	this.minSpaceBetweenHoles = 50 ;
 
-	this.lineScale = 2; //1 = min = meilleur qualité, plus on augmente moins c'est quali
+	this.lineScale = 7; //1 = min = meilleur qualité, plus on augmente moins c'est quali
 	this.lineScaleCount = this.lineScale;
 	this.sizeHead = 4; // taille de la partie qu'on dessine avec la qualité max
 	this.thickness = 8; // epaisseur de serpent
@@ -164,11 +164,11 @@ function Snake() {
 			}
 		}
 		
-		for(k=0 ; k<tailCopie.length-this.sizeHead-this.thickness; k ++) {					
-			if(  tailCopie[k] && dist(this.x,this.y,tailCopie[k][0],tailCopie[k][1]) < mindist  ) {
-				this.vect.setMag(0); // le serpent n'avance plus
-			}
-		}
+		// for(k=0 ; k<tailCopie.length-this.sizeHead-this.thickness; k ++) {					
+		// 	if(  tailCopie[k] && dist(this.x,this.y,tailCopie[k][0],tailCopie[k][1]) < mindist  ) {
+		// 		this.vect.setMag(0); // le serpent n'avance plus
+		// 	}
+		// }
 	}
 
 }
