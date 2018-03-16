@@ -40,7 +40,7 @@ function draw() {
 	player1.displayTail();	
 	player1.holeManager();
 	//player1.deathManager();	// pour le moment la mort bouffe trop de mémoire
-	//deathManager();
+	deathManager();
 	drawTailOfOtherPlayer() ; // on dessine les tails de toous le monde sauf nous
 	emitTail(); // on envois nos données au serveur
 
@@ -48,19 +48,16 @@ function draw() {
 	if(mouseIsPressed ) { // clique pour stopper le loop et faire des test #DEBUG
 		noLoop();
 		console.log("finish (taille du tableau : "+player1.tail.length+")");
-		for (var i = player1.tail.length-100; i < player1.tail.length; i++) {
-			//console.log(player1.tail[i]);
-		}
 	}
 }
 
 function deathManager() { 
 	var mindist = player1.thickness/2-0.5;
-	for (var k = 0; k < playersClient.length; k++) {
-		var tailCopie = playersClient[k].tail ;
+	for (var i = 0; i < playersClient.length; i++) {
 
-		for(k=0 ; k < player1.tail.length-player1.sizeHead-player1.thickness; k ++) {					
-			if(  player1.tail[k] && dist(player1.x,player1.y,tailCopie[k][0],tailCopie[k][1]) < mindist  ) {
+		for(k=0 ; k < player1.tail.length-player1.sizeHead-player1.thickness; k ++) {	
+
+			if(  player1.tail[k] && dist(player1.x,player1.y,playersClient[i].tail[k][0],playersClient[i].tail[k][1]) < mindist  ) {
 				player1.vect.setMag(0); // le serpent n'avance plus
 			}
 		}
@@ -69,7 +66,7 @@ function deathManager() {
 
 
 function onConnection() {
-	if(co) { // inutile saul pour le emit j'ai l'impression
+	if(co) { // inutile sauf pour le emit j'ai l'impression
 		co = false ;
 		socket.on('messageConnect', function(players) {
 			//a chaque fois qu'un gus se connecte tous les joueurs sont remis a jours
