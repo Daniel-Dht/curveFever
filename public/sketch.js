@@ -52,12 +52,12 @@ function draw() {
 }
 
 function deathManager() { 
-	var mindist = player1.thickness/2-0.5;
+	var mindist = player1.thickness/2-0.5;  // ATTENTION THICKNESS & HEAD
 	for (var i = 0; i < playersClient.length; i++) {
 
-		for(k=0 ; k < player1.tail.length-player1.sizeHead-player1.thickness; k ++) {	
+		for(k=0 ; k < playersClient[i].tail.length-player1.sizeHead-player1.thickness; k ++) {	// ATTENTION THICKNESS & HEAD
 
-			if(  player1.tail[k] && dist(player1.x,player1.y,playersClient[i].tail[k][0],playersClient[i].tail[k][1]) < mindist  ) {
+			if(  player1.tail[k] && dist(player1.x,player1.y, playersClient[i].tail[k][0],playersClient[i].tail[k+1][1]) < mindist  ) {
 				player1.vect.setMag(0); // le serpent n'avance plus
 			}
 		}
@@ -83,12 +83,12 @@ function drawTailOfOtherPlayer() {
 	for (var k = 0; k < playersClient.length; k++) { // on boucle sur tous les joueurs
 		if(playersClient[k].pseudo != pseudo ){  // on dessine sauf si c'est nous
 
-			var tailCopie = playersClient[k].tail ; // on copie la queue du joueur considéré
-			if( tailCopie.length > 1 ){
-				for(j = 0 ; j<tailCopie.length-1  ; j++){ // puis on affiche la tête
+			//var tailCopie = playersClient[k].tail ; // on copie la queue du joueur considéré
+			if( playersClient[k].tail.length > 1 ){
+				for(j = 0 ; j<playersClient[k].tail.length-1  ; j++){ // puis on affiche la tête
 					stroke(0,0,255);
 					strokeWeight(8);
-				 	line(tailCopie[j][0],tailCopie[j][1],tailCopie[j+1][0],tailCopie[j+1][1]);
+				 	line(playersClient[k].tail[j][0],playersClient[k].tail[j][1],playersClient[k].tail[j+1][0],playersClient[k].tail[j+1][1]);
 				}	
 			}	
 		}		
