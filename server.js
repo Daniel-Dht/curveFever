@@ -42,7 +42,9 @@ io.sockets.on('connection',
     		for (var index = 0; index < players.length; index++) {
     			if( players[index].id == socket.id) {
     				//console.log(data);
-    				players[index].tail.push(data);
+    				for (var i = 0; i < data.length; i++) {
+    					players[index].tail.push(data[i]);
+    				}
     				// console.log(players[index].tail);
     				socket.broadcast.emit('tailOfOfAll',[data,players[index].id]);
     			}

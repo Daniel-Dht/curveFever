@@ -99,11 +99,10 @@ function Snake() {
 			}
 			
 			
-			for(k = 0 ; k<this.tail.length-1  ; k++){ // puis on affiche la queue
-				stroke(242,100,80);	
-				line(this.tail[k][0],this.tail[k][1],this.tail[k+1][0],this.tail[k+1][1]);	
-			
-			}
+			// for(k = 0 ; k<this.tail.length-1  ; k++){ // puis on affiche la queue
+			// 	stroke(242,100,80);	
+			// 	line(this.tail[k][0],this.tail[k][1],this.tail[k+1][0],this.tail[k+1][1]);		
+			// }
 		}
 	}
 

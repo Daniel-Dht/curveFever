@@ -74,24 +74,29 @@ function onConnection() {
 			playersClient = players ; //players est la liste de jouerus du serveurs 
 		});
 		socket.emit('start',pseudo); //
+
 	}
 }
 
 
-function drawTailOfOtherPlayer() {
+function drawTailOfOtherPlayer() { // ou de tous, surement mieux
 
 	for (var k = 0; k < playersClient.length; k++) { // on boucle sur tous les joueurs
-		if(playersClient[k].pseudo != pseudo ){  // on dessine sauf si c'est nous
+		//if(playersClient[k].pseudo != pseudo ){  // on dessine sauf si c'est nous
+		if(playersClient[k].pseudo == pseudo ) {
+			stroke(242,100,80); 
+		} else {
+			stroke(0,0,255);
+		}
+		//var tailCopie = playersClient[k].tail ; // on copie la queue du joueur considéré
+		if( playersClient[k].tail.length > 1 ){
+			for(j = 0 ; j<playersClient[k].tail.length-1  ; j++){ // puis on affiche la tête			
 
-			//var tailCopie = playersClient[k].tail ; // on copie la queue du joueur considéré
-			if( playersClient[k].tail.length > 1 ){
-				for(j = 0 ; j<playersClient[k].tail.length-1  ; j++){ // puis on affiche la tête
-					stroke(0,0,255);
-					strokeWeight(8);
-				 	line(playersClient[k].tail[j][0],playersClient[k].tail[j][1],playersClient[k].tail[j+1][0],playersClient[k].tail[j+1][1]);
-				}	
+				strokeWeight(8);
+			 	line(playersClient[k].tail[j][0],playersClient[k].tail[j][1],playersClient[k].tail[j+1][0],playersClient[k].tail[j+1][1]  );
 			}	
-		}		
+		}	
+		//}		
 	}
 }
 
