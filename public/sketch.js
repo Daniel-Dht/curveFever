@@ -10,6 +10,8 @@ var playersClient = [] ; // liste de tous les joueurs connectés
 var temp = 0; // trouver comment s'en passer si possible
 var co = true; 
 var pseudo ; // pseudo de cette session
+var alive = true ;
+var start = false ;
 
 function setup() {
 	createCanvas(600, 400);
@@ -28,27 +30,53 @@ function setup() {
 		}  
 	});
 	socket.on('tailOfOfAll', treatReceivedData); // on reçoit les données des tail de tous
+
+	var testButton = select('#test');
+	testButton.mousePressed(function() {
+		start = true;
+	});
 }
 
 
 function draw() {
 	background(200);
 	onConnection() ;
-	player1.controlKey();
-	player1.shiftHead();
-	player1.borderManager();
-	player1.displayTail();	
-	player1.holeManager();
-	//player1.deathManager();	// pour le moment la mort bouffe trop de mémoire
-	deathManager();
-	drawTailOfOtherPlayer() ; // on dessine les tails de toous le monde sauf nous
-	emitTail(); // on envois nos données au serveur
-
-
-	if(mouseIsPressed ) { // clique pour stopper le loop et faire des test #DEBUG
-		noLoop();
-		console.log("finish (taille du tableau : "+player1.tail.length+")");
+	if(alive && start) {
+		player1.vect.setMag(player1.v);
+		player1.controlKey();
+		player1.shiftHead();
+		player1.borderManager();
+		player1.displayHead();	
+		player1.holeManager();
+		//player1.deathManager();	// pour le moment la mort bouffe trop de mémoire
+		deathManager();
+		emitTail(); // on envoit nos données au serveur
+	} 
+	if(!alive) {
+		noFill();
+		stroke(250,110,80);
+		rect(0,0,width,height);
 	}
+	if(!start) {
+		fill(242,100,80);
+		noStroke();
+		ellipse(player1.x,player1.y,player1.thickness,player1.thickness);
+
+		player1.controlKey();
+		strokeWeight(2);
+		stroke(0);
+		player1.vect.setMag(50);
+		line(player1.x,  player1.y,  player1.vect.x+player1.x,  player1.vect.y+player1.y)
+		player1.x += player1.vect.x/25 ;
+		player1.y += player1.vect.y/25 ;
+	}
+
+	drawTailOfOtherPlayer() ; // on dessine les tails de toous le monde sauf nous
+
+	// if(mouseIsPressed ) { // clique pour stopper le loop et faire des test #DEBUG
+	// 	noLoop();
+	// 	console.log("finish (taille du tableau : "+player1.tail.length+")");
+	// }
 }
 
 function deathManager() { 
@@ -59,6 +87,7 @@ function deathManager() {
 
 			if(  player1.tail[k] && dist(player1.x,player1.y, playersClient[i].tail[k][0],playersClient[i].tail[k+1][1]) < mindist  ) {
 				player1.vect.setMag(0); // le serpent n'avance plus
+				alive = false;
 			}
 		}
 	}
