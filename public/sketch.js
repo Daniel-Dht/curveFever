@@ -14,43 +14,43 @@ var alive = true ;
 var start = false ;
 
 function setup() {
-	createCanvas(600, 400);
+	var canvas = createCanvas(600, 400);
+	canvas.parent('sketch-holder'); // on place le canvas dans la div 
 	background(200);
 	socket = io.connect();
 	pseudo = prompt('Quel est votre pseudo ?');
 	player1 = new Snake(); // vous
 	
-	socket.on('messageDisconnect', function(dataID) { // quand qq se déco, on l'enlève de la liste
-		for (var i = 0; i < playersClient.length; i++) {
-			if(playersClient[i].id == dataID ){
-				console.log(playersClient[i].pseudo+" s'est déco, c'est le client qui le dit !");
-				playersClient.splice(i,1);
-				//console.log(playersClient);
-			} 
-		}  
-	});
+	disconnexionManager(); //socket.on('messageDisconnect',dataID) !
 	socket.on('tailOfOfAll', treatReceivedData); // on reçoit les données des tail de tous
+	socket.on('playerReady', playersReady ); 
 
-	var testButton = select('#test');
+	var testButton = select('#test'); // boutton pour commencer à dessiner le serpent
 	testButton.mousePressed(function() {
 		start = true;
+		socket.emit('playerReady');
 	});
+	
 }
 
 
 function draw() {
-	background(200);
+	//background(200);
 	onConnection() ;
 	if(alive && start) {
 		player1.vect.setMag(player1.v);
 		player1.controlKey();
 		player1.shiftHead();
 		player1.borderManager();
-		player1.displayHead();	
+		player1.displayHead();	// à retraiter
 		player1.holeManager();
-		//player1.deathManager();	// pour le moment la mort bouffe trop de mémoire
-		deathManager();
+		player1.deathManager();	// par rapport à nous
+		deathManager(); // par rapport aux autres
 		emitTail(); // on envoit nos données au serveur
+
+		noFill();
+		stroke(80,70,50);
+		rect(0,0,width,height);
 	} 
 	if(!alive) {
 		noFill();
@@ -62,32 +62,78 @@ function draw() {
 		noStroke();
 		ellipse(player1.x,player1.y,player1.thickness,player1.thickness);
 
-		player1.controlKey();
+		player1.controlKey(); // pour pouvoir bouger avant de commencer ! :
+		// socket.emit('beforeStart', [player1.x,player1.y]);
+		// socket.on('beforeStart', drawPointOfAll);
+
 		strokeWeight(2);
 		stroke(0);
 		player1.vect.setMag(50);
 		line(player1.x,  player1.y,  player1.vect.x+player1.x,  player1.vect.y+player1.y)
+
 		player1.x += player1.vect.x/25 ;
 		player1.y += player1.vect.y/25 ;
+		player1.borderManagerAtStart();
 	}
 
-	drawTailOfOtherPlayer() ; // on dessine les tails de toous le monde sauf nous
+	drawTailOfAllPlayer() ; // on dessine les tails de toous le monde sauf nous
 
 	// if(mouseIsPressed ) { // clique pour stopper le loop et faire des test #DEBUG
 	// 	noLoop();
 	// 	console.log("finish (taille du tableau : "+player1.tail.length+")");
 	// }
 }
+function drawPointOfAll(dataXYid){
+	noStroke();
+	fill(0,0,220);
+	//console.log(dataXYid);
+	strokeWeight(7);
+	stroke(0);
+	ellipse(dataXYid[0],dataXYid[1],8,8);
+	for (var k = 0; k < playersClient.length; k++) { 	
+		if(playersClient[k].id == dataXYid[2] ) fill(220,80,50);	
+		
+		ellipse(dataXYid[0],dataXYid[1],8,8);
+	}
+		
+	
+}
+
+function displayListOfPlayer() { // affiche les jouerus dans une div
+	for (var i = 0; i < playersClient.length; i++) {
+		var divCheck = select("#player"+playersClient[i].id);
+		if( divCheck == null) { // on créé la div que si elle n'existe pas
+			var div1 = createDiv('this is the child'+playersClient[i].pseudo+" "+playersClient[i].id);
+			div1.parent('playerList'); // use id
+			div1.id("player"+playersClient[i].id);
+		}
+	}
+}
+
+function disconnexionManager() {
+	socket.on('messageDisconnect', function(dataID) { // quand qq se déco, on l'enlève de la liste
+		for (var i = 0; i < playersClient.length; i++) {
+			if(playersClient[i].id == dataID ){
+				var divToRemove = select("#player"+playersClient[i].id);
+				console.log(playersClient[i].pseudo+" s'est déco, c'est le client qui le dit !");
+				playersClient.splice(i,1);
+				//console.log(playersClient);
+			} 
+		}  
+		divToRemove.remove(); // on enleve le joueur de la liste de div affichant les joueurs connectés
+	});	
+}
 
 function deathManager() { 
-	var mindist = player1.thickness/2-0.5;  // ATTENTION THICKNESS & HEAD
+	var mindist = player1.thickness;  // ATTENTION THICKNESS & HEAD
 	for (var i = 0; i < playersClient.length; i++) {
+		if(playersClient[i].pseudo != pseudo && playersClient[i].tail.length>2) { // si c'est ps nous ATTENTION PSEUDO ET ID
 
-		for(k=0 ; k < playersClient[i].tail.length-player1.sizeHead-player1.thickness; k ++) {	// ATTENTION THICKNESS & HEAD
-
-			if(  player1.tail[k] && dist(player1.x,player1.y, playersClient[i].tail[k][0],playersClient[i].tail[k+1][1]) < mindist  ) {
-				player1.vect.setMag(0); // le serpent n'avance plus
-				alive = false;
+			for(k=0 ; k < playersClient[i].tail.length; k ++) {	
+				if( playersClient[i].tail[k] && dist(player1.x,player1.y, playersClient[i].tail[k][0],playersClient[i].tail[k][1]) < mindist  ) {
+					player1.vect.setMag(0); // le serpent n'avance plus
+					alive = false;
+				}
 			}
 		}
 	}
@@ -101,6 +147,7 @@ function onConnection() {
 			//a chaque fois qu'un gus se connecte tous les joueurs sont remis a jours
 			console.log("un joueur s'est connecté ("+players[players.length-1].pseudo+")");
 			playersClient = players ; //players est la liste de jouerus du serveurs 
+			displayListOfPlayer();
 		});
 		socket.emit('start',pseudo); //
 
@@ -108,11 +155,11 @@ function onConnection() {
 }
 
 
-function drawTailOfOtherPlayer() { // ou de tous, surement mieux
+function drawTailOfAllPlayer() { // ou de tous, surement mieux
 
 	for (var k = 0; k < playersClient.length; k++) { // on boucle sur tous les joueurs
 		//if(playersClient[k].pseudo != pseudo ){  // on dessine sauf si c'est nous
-		if(playersClient[k].pseudo == pseudo ) {
+		if(playersClient[k].pseudo == pseudo ) { //ATTENTION ID !!
 			stroke(242,100,80); 
 		} else {
 			stroke(0,0,255);
@@ -123,6 +170,9 @@ function drawTailOfOtherPlayer() { // ou de tous, surement mieux
 
 				strokeWeight(8);
 			 	line(playersClient[k].tail[j][0],playersClient[k].tail[j][1],playersClient[k].tail[j+1][0],playersClient[k].tail[j+1][1]  );
+			 	// noStroke();
+			 	// fill(255,100,80);
+			 	// ellipse(playersClient[k].tail[j][0],playersClient[k].tail[j][1],2,2);
 			}	
 		}	
 		//}		
@@ -134,6 +184,14 @@ function emitTail() {
 	if( player1.tempDifference.length>0){
 		socket.emit('tailTabEmit', data);
 		player1.tempDifference = []; // on vide les données déja envoyées
+	}	
+}
+
+function playersReady(playerId){
+	for (var k = 0; k < playersClient.length; k++) { // jouerus par joueurs on remplie leur tail[] avec les données reçues
+		if(playersClient[k].id == playerId ){  //on ajoute les données  au joueur qui correspond
+			playersClient[k].start = true ;
+		}
 	}	
 }
 

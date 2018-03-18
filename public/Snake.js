@@ -18,9 +18,9 @@ function Snake() {
 	this.hole = 0;
 	this.minSpaceBetweenHoles = 50 ;
 
-	this.lineScale = 2; //1 = min = meilleur qualité, plus on augmente moins c'est quali
+	this.lineScale = 1; //1 = min = meilleur qualité, plus on augmente moins c'est quali
 	this.lineScaleCount = this.lineScale;
-	this.sizeHead = 4; // taille de la partie qu'on dessine avec la qualité max
+	this.sizeHead = 5; // taille de la partie qu'on dessine avec la qualité max
 	this.thickness = 8; // epaisseur de serpent
 
 	this.tempDifference = [];
@@ -87,7 +87,7 @@ function Snake() {
 
 	this.displayHead = function() { // la tête est de qualité, la queue moins pour performance and smooth driving
 		strokeWeight(this.thickness);
-		stroke(242,100,80);			
+		stroke(0,0,0);			
 		//console.log("ok : "+this.tail[0]+" , "+this.tail[1]);
 		//console.log("ok : "+frameCount+" voila : "+this.tail[0]+" , "+this.tail[1]+", head.length :"+this.head.length );
 
@@ -159,6 +159,7 @@ function Snake() {
 		for(k=0 ; k<this.tail.length-this.sizeHead-this.thickness; k ++) {					
 			if(  this.tail[k] && dist(this.x,this.y,this.tail[k][0],this.tail[k][1]) < mindist  ) {
 				this.vect.setMag(0); // le serpent n'avance plus
+				alive = false;
 			}
 		}
 		
@@ -168,5 +169,15 @@ function Snake() {
 		// 	}
 		// }
 	}
+	this.borderManagerAtStart = function() {
 
+		if( this.x > width) this.x = 0;
+
+		if( this.x < 0)  this.x = width;
+		
+		if( this.y > height) this.y = 0;
+		
+		if( this.y < 0)  this.y = height;
+
+	}
 }

@@ -12,10 +12,13 @@ var io = socket(server);
 var id = 0;
 var players = [] ; // liste des joueurs
 
-function Player(id,pseudo) { // objet joueur coté serveur
+function Player(id,pseudo,x,y) { // objet joueur coté serveur
 	this.id = id;
 	this.tail = [];
 	this.pseudo = pseudo;
+	this.start = false ;
+	this.x = x ; //avant que la partie ne commence
+	this.y = y ; //avant que la partie ne commence
 	//this.color = 
 }
 
@@ -35,11 +38,32 @@ io.sockets.on('connection',
 			//console.log(players);
    	});
 
+    socket.on('beforeStart', // marche pas encore
+    	function(dataXY) {
+    		for (var index = 0; index < players.length; index++) {
+    			if( players[index].id == socket.id) {
+    				socket.broadcast.emit('beforeStart',[dataXY[0],dataXY[1],socket.id]);
+    		//console.log([dataXY[0],dataXY[1],socket.id]);
+    			}
+    		}
+    	}
+    );
+
+    socket.on('playerReady',
+    	function() {
+    		for (var index = 0; index < players.length; index++) {
+    			if( players[index].id == socket.id) {
+    				players[index].start = true ;
+    				socket.broadcast.emit('playerReady',players[index].id);
+    			}
+    		}
+    	}
+    );
     socket.on('tailTabEmit',
     	function(data) {
     		//console.log(data);
     		//socket.broadcast.emit('tailTabReceived', data);
-    		for (var index = 0; index < players.length; index++) {
+    		for (var index = 0; index < players.length; index++) { // je crois que toutes ces boucles for ne servent à rien
     			if( players[index].id == socket.id) {
     				//console.log(data);
     				for (var i = 0; i < data.length; i++) {
