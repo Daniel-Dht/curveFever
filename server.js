@@ -11,15 +11,15 @@ var io = socket(server);
 
 var id = 0;
 var players = [] ; // liste des joueurs
+var colors = ['#DB0A0A','#06A50E','#FF8E05','#053BFF','#FF02EE','#02FFE5','#FFFF02'];
 
-function Player(id,pseudo,x,y) { // objet joueur coté serveur
+function Player(id,pseudo) { // objet joueur coté serveur
 	this.id = id;
 	this.tail = [];
 	this.pseudo = pseudo;
 	this.start = false ;
-	this.x = x ; //avant que la partie ne commence
-	this.y = y ; //avant que la partie ne commence
-	//this.color = 
+	this.color = pickColor() ;
+
 }
 
 io.sockets.on('connection', 
@@ -29,9 +29,11 @@ io.sockets.on('connection',
    	socket.on('start', 
    		function(pseudo) {	
    			socket.broadcast.to(socket.id).emit('synchroPlayers',players);	
-			var player = new Player(id,pseudo);
+   			if(pseudo == null) pseudo = 'HorseWithNoName_' + id ;
+			var player = new Player(id,pseudo );
 			players.push(player);
 			socket.id = id;
+
 			id++ ;	
 			console.log("son pseudo est : "+player.pseudo+", son id :"+player.id);
 			socket.broadcast.emit('messageConnect',players);
@@ -43,7 +45,7 @@ io.sockets.on('connection',
     		for (var index = 0; index < players.length; index++) {
     			if( players[index].id == socket.id) {
     				socket.broadcast.emit('beforeStart',[dataXY[0],dataXY[1],socket.id]);
-    		//console.log([dataXY[0],dataXY[1],socket.id]);
+    				//console.log([dataXY[0],dataXY[1],socket.id]);
     			}
     		}
     	}
@@ -82,8 +84,9 @@ io.sockets.on('connection',
     			if(players[index].id == socket.id){
     				console.log("Client has disconnected ("+players[index].pseudo+")");
       				socket.broadcast.emit('messageDisconnect',players[index].id);
+      				colors.push(players[index].color); // on remet la couleur la liste
     				players.splice(index,1);
-    				//console.log(players);
+    				//console.log(colors);
     			} 
     		}    		
       	}
@@ -92,8 +95,18 @@ io.sockets.on('connection',
 });
 
 
+function getRandomInt(max) {
+  return Math.floor(Math.random() * Math.floor(max));
+}
 
+function pickColor() {
+	var indexColor = Math.floor(getRandomInt(colors.length));
+	var colorPicked = colors[indexColor];
 
+	colors.splice(indexColor,1);
+	//console.log(colors);
+	return colorPicked ;
+}
 
 
 

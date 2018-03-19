@@ -13,6 +13,7 @@ var pseudo ; // pseudo de cette session
 var alive = true ;
 var start = false ;
 
+
 function setup() {
 	var canvas = createCanvas(600, 400);
 	canvas.parent('sketch-holder'); // on place le canvas dans la div 
@@ -22,8 +23,10 @@ function setup() {
 	player1 = new Snake(); // vous
 	
 	disconnexionManager(); //socket.on('messageDisconnect',dataID) !
-	socket.on('tailOfOfAll', treatReceivedData); // on reçoit les données des tail de tous
+	socket.on('tailOfOfAll', treatReceivedDataTail); // on reçoit les données des tail de tous
 	socket.on('playerReady', playersReady ); 
+	socket.on('beforeStart', treatReceivedDataHead); // avant la partie
+	
 
 	var testButton = select('#test'); // boutton pour commencer à dessiner le serpent
 	testButton.mousePressed(function() {
@@ -35,7 +38,7 @@ function setup() {
 
 
 function draw() {
-	//background(200);
+	background(200);
 	onConnection() ;
 	if(alive && start) {
 		player1.vect.setMag(player1.v);
@@ -57,14 +60,11 @@ function draw() {
 		stroke(250,110,80);
 		rect(0,0,width,height);
 	}
-	if(!start) {
-		fill(242,100,80);
-		noStroke();
-		ellipse(player1.x,player1.y,player1.thickness,player1.thickness);
+	if(!start) { // on veut afficher ici les têtes de tout le monde
 
 		player1.controlKey(); // pour pouvoir bouger avant de commencer ! :
-		// socket.emit('beforeStart', [player1.x,player1.y]);
-		// socket.on('beforeStart', drawPointOfAll);
+		socket.emit('beforeStart', [player1.x,player1.y]);	 
+		drawPointOfAll();
 
 		strokeWeight(2);
 		stroke(0);
@@ -83,17 +83,13 @@ function draw() {
 	// 	console.log("finish (taille du tableau : "+player1.tail.length+")");
 	// }
 }
-function drawPointOfAll(dataXYid){
+
+function drawPointOfAll(){
 	noStroke();
-	fill(0,0,220);
-	//console.log(dataXYid);
-	strokeWeight(7);
-	stroke(0);
-	ellipse(dataXYid[0],dataXYid[1],8,8);
+	
 	for (var k = 0; k < playersClient.length; k++) { 	
-		if(playersClient[k].id == dataXYid[2] ) fill(220,80,50);	
-		
-		ellipse(dataXYid[0],dataXYid[1],8,8);
+		fill(playersClient[k].color);			
+		ellipse(playersClient[k].x , playersClient[k].y ,8,8);
 	}
 		
 	
@@ -103,7 +99,7 @@ function displayListOfPlayer() { // affiche les jouerus dans une div
 	for (var i = 0; i < playersClient.length; i++) {
 		var divCheck = select("#player"+playersClient[i].id);
 		if( divCheck == null) { // on créé la div que si elle n'existe pas
-			var div1 = createDiv('this is the child'+playersClient[i].pseudo+" "+playersClient[i].id);
+			var div1 = createDiv('Player : '+playersClient[i].pseudo+", id : "+playersClient[i].id);
 			div1.parent('playerList'); // use id
 			div1.id("player"+playersClient[i].id);
 		}
@@ -159,12 +155,7 @@ function drawTailOfAllPlayer() { // ou de tous, surement mieux
 
 	for (var k = 0; k < playersClient.length; k++) { // on boucle sur tous les joueurs
 		//if(playersClient[k].pseudo != pseudo ){  // on dessine sauf si c'est nous
-		if(playersClient[k].pseudo == pseudo ) { //ATTENTION ID !!
-			stroke(242,100,80); 
-		} else {
-			stroke(0,0,255);
-		}
-		//var tailCopie = playersClient[k].tail ; // on copie la queue du joueur considéré
+		stroke(playersClient[k].color);	
 		if( playersClient[k].tail.length > 1 ){
 			for(j = 0 ; j<playersClient[k].tail.length-1  ; j++){ // puis on affiche la tête			
 
@@ -174,8 +165,7 @@ function drawTailOfAllPlayer() { // ou de tous, surement mieux
 			 	// fill(255,100,80);
 			 	// ellipse(playersClient[k].tail[j][0],playersClient[k].tail[j][1],2,2);
 			}	
-		}	
-		//}		
+		}		
 	}
 }
 
@@ -195,7 +185,7 @@ function playersReady(playerId){
 	}	
 }
 
-function treatReceivedData(data) {
+function treatReceivedDataTail(data) {
 // data[1] est l'id du joueur corresondant aux data émises : data[0]
 	for (var k = 0; k < playersClient.length; k++) { // jouerus par joueurs on remplie leur tail[] avec les données reçues
 		if(playersClient[k].id == data[1] ){  //on ajoute les données  au joueur qui correspond
@@ -208,7 +198,16 @@ function treatReceivedData(data) {
 	}	
 }
 
+function treatReceivedDataHead(dataXYid) {
+// data[1] est l'id du joueur corresondant aux data émises : data[0]
+	for (var k = 0; k < playersClient.length; k++) { // jouerus par joueurs on remplie leur tail[] avec les données reçues
+		if(playersClient[k].id == dataXYid[2] ){  //on ajoute les données  au joueur qui correspond
 
+			playersClient[k].x = dataXYid[0];
+			playersClient[k].y = dataXYid[1];
+		}
+	}	
+}
 
 
 
