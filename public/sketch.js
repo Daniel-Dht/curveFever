@@ -12,7 +12,7 @@ var co = true;
 var pseudo ; // pseudo de cette session
 var alive = true ;
 var start = false ;
-
+var idClient = Math.floor(1000*Math.random());
 
 function setup() {
 	var canvas = createCanvas(600, 400);
@@ -26,20 +26,22 @@ function setup() {
 	socket.on('tailOfOfAll', treatReceivedDataTail); // on reçoit les données des tail de tous
 	socket.on('playerReady', playersReady ); 
 	socket.on('beforeStart', treatReceivedDataHead); // avant la partie
+	socket.on('restartGame', newGame);
 	
 
 	var testButton = select('#test'); // boutton pour commencer à dessiner le serpent
 	testButton.mousePressed(function() {
 		start = true;
 		socket.emit('playerReady');
-	});
-	
+		//socket.emit('deathOfPlayer');
+	});	
 }
 
 
 function draw() {
 	background(200);
 	onConnection() ;
+
 	if(alive && start) {
 		player1.vect.setMag(player1.v);
 		player1.controlKey();
@@ -50,15 +52,20 @@ function draw() {
 		player1.deathManager();	// par rapport à nous
 		deathManager(); // par rapport aux autres
 		emitTail(); // on envoit nos données au serveur
-
 		noFill();
-		stroke(80,70,50);
+		stroke(player1.color);
+		strokeWeight(6);
 		rect(0,0,width,height);
 	} 
 	if(!alive) {
-		noFill();
-		stroke(250,110,80);
+		
+		stroke(player1.color);
+		strokeWeight(6);
 		rect(0,0,width,height);
+
+		strokeWeight(4);
+		stroke('#DB0A0A');
+		rect(4,4,width-8,height-8);
 	}
 	if(!start) { // on veut afficher ici les têtes de tout le monde
 
@@ -74,14 +81,23 @@ function draw() {
 		player1.x += player1.vect.x/25 ;
 		player1.y += player1.vect.y/25 ;
 		player1.borderManagerAtStart();
+
+		if(typeof player1.color !='undefined'){  
+			noFill();
+			stroke(player1.color);
+			strokeWeight(6);
+			rect(0,0,width,height);
+		}
 	}
 
-	drawTailOfAllPlayer() ; // on dessine les tails de toous le monde sauf nous
+	drawTailOfAllPlayer() ; 
 
-	// if(mouseIsPressed ) { // clique pour stopper le loop et faire des test #DEBUG
-	// 	noLoop();
-	// 	console.log("finish (taille du tableau : "+player1.tail.length+")");
-	// }
+}
+
+function newGame(players) {
+	playersClient = players ;
+	alive = true ;
+	start = true;
 }
 
 function drawPointOfAll(){
@@ -90,12 +106,10 @@ function drawPointOfAll(){
 	for (var k = 0; k < playersClient.length; k++) { 	
 		fill(playersClient[k].color);			
 		ellipse(playersClient[k].x , playersClient[k].y ,8,8);
-	}
-		
-	
+	}		
 }
 
-function displayListOfPlayer() { // affiche les jouerus dans une div
+function displayListOfPlayer() { // affiche les joueurs dans une div
 	for (var i = 0; i < playersClient.length; i++) {
 		var divCheck = select("#player"+playersClient[i].id);
 		if( divCheck == null) { // on créé la div que si elle n'existe pas
@@ -128,11 +142,13 @@ function deathManager() {
 			for(k=0 ; k < playersClient[i].tail.length; k ++) {	
 				if( playersClient[i].tail[k] && dist(player1.x,player1.y, playersClient[i].tail[k][0],playersClient[i].tail[k][1]) < mindist  ) {
 					player1.vect.setMag(0); // le serpent n'avance plus
+					//socket.emit('deathOfPlayer'); // wtf ce bout de code marche aps ici
 					alive = false;
 				}
 			}
 		}
 	}
+	if(!alive) socket.emit('deathOfPlayer');
 }
 
 
@@ -144,10 +160,14 @@ function onConnection() {
 			console.log("un joueur s'est connecté ("+players[players.length-1].pseudo+")");
 			playersClient = players ; //players est la liste de jouerus du serveurs 
 			displayListOfPlayer();
+			for (var k = 0; k < playersClient.length; k++) { 
+				if(playersClient[k].pseudo == pseudo && playersClient[k].idClient==idClient){ 
+					player1.color = playersClient[k].color ;
+				}
+			}
 		});
-		socket.emit('start',pseudo); //
-
-	}
+		socket.emit('start',[pseudo,idClient]); //
+	}	
 }
 
 

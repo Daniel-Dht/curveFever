@@ -13,12 +13,14 @@ var id = 0;
 var players = [] ; // liste des joueurs
 var colors = ['#DB0A0A','#06A50E','#FF8E05','#053BFF','#FF02EE','#02FFE5','#FFFF02'];
 
-function Player(id,pseudo) { // objet joueur coté serveur
+function Player(id, idClient, pseudo) { // objet joueur coté serveur
 	this.id = id;
+	this.idClient = idClient ;
 	this.tail = [];
 	this.pseudo = pseudo;
 	this.start = false ;
 	this.color = pickColor() ;
+	this.dead = false ;
 
 }
 
@@ -27,10 +29,12 @@ io.sockets.on('connection',
     	console.log("We have a new client: " + socket.id);
 
    	socket.on('start', 
-   		function(pseudo) {	
-   			socket.broadcast.to(socket.id).emit('synchroPlayers',players);	
+   		function(data) {// data = [pseudo,idClient]
+   			//socket.broadcast.to(socket.id).emit('synchroPlayers',players);	
+
+   			var pseudo =data[0];
    			if(pseudo == null) pseudo = 'HorseWithNoName_' + id ;
-			var player = new Player(id,pseudo );
+			var player = new Player(id,data[1],pseudo );
 			players.push(player);
 			socket.id = id;
 
@@ -40,12 +44,12 @@ io.sockets.on('connection',
 			//console.log(players);
    	});
 
-    socket.on('beforeStart', // marche pas encore
+    socket.on('beforeStart', 
     	function(dataXY) {
     		for (var index = 0; index < players.length; index++) {
     			if( players[index].id == socket.id) {
     				socket.broadcast.emit('beforeStart',[dataXY[0],dataXY[1],socket.id]);
-    				//console.log([dataXY[0],dataXY[1],socket.id]);
+ 
     			}
     		}
     	}
@@ -61,22 +65,30 @@ io.sockets.on('connection',
     		}
     	}
     );
+
     socket.on('tailTabEmit',
     	function(data) {
-    		//console.log(data);
-    		//socket.broadcast.emit('tailTabReceived', data);
-    		for (var index = 0; index < players.length; index++) { // je crois que toutes ces boucles for ne servent à rien
+
+    		for (var index = 0; index < players.length; index++) { 
     			if( players[index].id == socket.id) {
     				//console.log(data);
     				for (var i = 0; i < data.length; i++) {
     					players[index].tail.push(data[i]);
     				}
-    				// console.log(players[index].tail);
     				socket.broadcast.emit('tailOfOfAll',[data,players[index].id]);
     			}
     		}
     	}
     );
+
+    socket.on('deathOfPlayer', function() {
+    	for (var index = 0; index < players.length; index++) { 
+			if( players[index].id == socket.id) {
+				players[index].dead = true ;
+				//checkIfEveryoneIsDead();
+			}
+    	}
+    });
 
     socket.on('disconnect',
     	function() {
@@ -84,7 +96,7 @@ io.sockets.on('connection',
     			if(players[index].id == socket.id){
     				console.log("Client has disconnected ("+players[index].pseudo+")");
       				socket.broadcast.emit('messageDisconnect',players[index].id);
-      				colors.push(players[index].color); // on remet la couleur la liste
+      				colors.push(players[index].color); // on remet la couleur dans la liste
     				players.splice(index,1);
     				//console.log(colors);
     			} 
@@ -94,6 +106,21 @@ io.sockets.on('connection',
 
 });
 
+function checkIfEveryoneIsDead() {
+	var count = 0;
+	for (var i = 0; i < players.length; i++) {
+		if(players[i].dead) count ++ ;
+	}
+	if( count == players.length ) clearTails()
+
+}
+
+function clearTails() {
+	for (var i = 0; i < players.length; i++) {
+		players[i].tail = [] ;
+	}
+	io.emit('restartGame', players);
+}
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));

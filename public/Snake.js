@@ -3,6 +3,7 @@ function Snake() {
 	this.x = random(width);;
 	this.y = random(height);
 	this.v =   2;
+	this.color ;
 
 	this.vect = createVector(1, 0); // vecteur vitesse
 	this.vect.setMag(this.v);
