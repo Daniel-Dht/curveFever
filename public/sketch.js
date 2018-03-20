@@ -10,7 +10,7 @@ var co = true;
 var pseudo ; // pseudo de cette session
 var alive = true ;
 var start = false ;
-var idClient = Math.floor(1000*Math.random());
+var idClient = Math.floor(10000*Math.random());
 
 var showRestartButton = false;
 var reStartButton ; 
@@ -126,15 +126,17 @@ function displayListOfPlayer() { // affiche les joueurs dans une div
 	for (var i = 0; i < playersClient.length; i++) {
 		var divCheck = select("#player"+playersClient[i].id);
 		if( divCheck == null) { // on créé la div que si elle n'existe pas
-			var div1 = createDiv(playersClient[i].pseudo+"  (id : "+playersClient[i].id+")");
+			var div1 = createDiv(playersClient[i].pseudo);
 			div1.parent('playerList'); // use id
 			div1.id("player"+playersClient[i].id);
-			div1.style('padding','5px');
+			div1.addClass('player');
+			if(playersClient[i].idClient == idClient ){
+				div1.addClass('mainPlayer') ;
+				//console.log('ok');
+			} 
+
 			if(typeof playersClient[i] !='undefined') {
 				div1.style('background-color', playersClient[i].color);
-				div1.style('border-radius',' 5px') ;
-				div1.style('margin',' 10px') ;
-				div1.style('width',' 100%') ;
 				//div1.style('color', playersClient[i].color);
 			} else {
 				div1.style('color', '#fffff');
@@ -185,8 +187,9 @@ function onConnection() {
 			playersClient = players ; //players est la liste de jouerus du serveurs 
 			displayListOfPlayer();
 			for (var k = 0; k < playersClient.length; k++) { 
-				if(playersClient[k].pseudo == pseudo && playersClient[k].idClient==idClient){ 
+				if( playersClient[k].idClient==idClient){ 
 					player1.color = playersClient[k].color ;
+					pseudo = playersClient[k].pseudo ;
 				}
 			}
 		});
