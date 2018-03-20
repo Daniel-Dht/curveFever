@@ -13,7 +13,9 @@ var start = false ;
 var idClient = Math.floor(10000*Math.random());
 
 var showRestartButton = false;
+var showStartButton = true;
 var reStartButton ; 
+var startButton ; 
 
 function setup() {
 	var canvas = createCanvas(600, 400);
@@ -25,29 +27,36 @@ function setup() {
 	
 	disconnexionManager(); //socket.on('messageDisconnect',dataID) !
 	socket.on('tailOfOfAll', treatReceivedDataTail); // on reçoit les données des tail de tous
-	socket.on('playerReady', playersReady ); 
+	socket.on('playerReady', playerReady ); // permet seulement de savoir quand qq est prêt et modifier sa div
 	socket.on('beforeStart', treatReceivedDataHead); // avant la partie
-	socket.on('restartGame', restartAGame);
-	
+	socket.on('restartGame', function(){showRestartButton = true});
+	socket.on('everyoneReady', startGame) ;
+	socket.on('heartbeat', function(count){
+		console.log("heartbeat : " +count);
+		var div = select("#countDown");
+		div.html(5-count);
 
-	var startButton = select('#startGame'); // boutton pour commencer à dessiner le serpent
-	startButton.mousePressed(function() {
-		start = true;
-		socket.emit('playerReady');
-	});	
-	reStartButton = select('#reStartGame');
-	reStartButton.mousePressed(function() {
-		newGame();
-		showRestartButton = false;
 	});
+
+	startButton = select('#startGame'); // boutton pour commencer à dessiner le serpent
+	startButton.mousePressed(startButtonAction ) ;
+
+	reStartButton = select('#reStartGame'); // bouton pour recommencer une partie
+	reStartButton.mousePressed(reStartButtonAction );
 }
 
 
 function draw() {
 	background(200);
 	onConnection() ;
+	if(showStartButton) {
+		if (keyIsDown(13)) startButtonAction(); // appuyer sur Entré = activé le bouton
+	}
 	if(!showRestartButton) reStartButton.hide() ;
-	if(showRestartButton) reStartButton.show() ;
+	if(showRestartButton) {
+		reStartButton.show() ;
+		if (keyIsDown(13)) reStartButtonAction(); // appuyer sur Entré = activé le bouton
+	}
 
 	if(alive && start) {
 		player1.vect.setMag(player1.v);
@@ -62,7 +71,7 @@ function draw() {
 		noFill();
 		if(typeof player1.color !='undefined') stroke(player1.color);
 		strokeWeight(6);
-		rect(0,0,width,height);
+		rect(0,0,width,height); // quand la partie est en cours
 	} 
 	if(!alive) {
 		
@@ -72,9 +81,9 @@ function draw() {
 
 		strokeWeight(4);
 		stroke('#DB0A0A');
-		rect(4,4,width-8,height-8);
+		rect(4,4,width-8,height-8); // quand la partie est en cours mais qu'on est mort
 	}
-	if(!start) { // on veut afficher ici les têtes de tout le monde
+	if(!start) { //quand la partie n' pas encore commencé
 
 		player1.controlKey(); // pour pouvoir bouger avant de commencer ! :
 		socket.emit('beforeStart', [player1.x,player1.y]);	 
@@ -93,15 +102,32 @@ function draw() {
 	}
 
 	drawTailOfAllPlayer() ; 
-
 }
 
-function restartAGame() {
-	// utile car implaçable dans le socket.on
-	showRestartButton = true ;
+function startButtonAction() {
+	showStartButton = false;
+	socket.emit('playerReady');
+	var div = select('#startDiv');
+	div.hide(); 
 }
 
-function newGame() {
+function reStartButtonAction(){
+	initForNewGame();
+	showRestartButton = false;
+	showStartButton = true ;
+	var div = select('#startDiv');
+	div.show();
+}
+
+function startGame() {
+	for (var k = 0; k < playersClient.length; k++) { // jouerus par joueurs on remplie leur tail[] avec les données reçues
+		var div1 = select("#player"+playersClient[k].id);
+		div1.removeClass('playerReady');
+	}	
+	start = true ;
+}
+
+function initForNewGame() {
 	for (var k = 0; k < playersClient.length; k++) { 	 
 		playersClient[k].tail = [];
 	}	
@@ -197,7 +223,7 @@ function onConnection() {
 	}	
 }
 
-function drawTailOfAllPlayer() { // ou de tous, surement mieux
+function drawTailOfAllPlayer() { 
 
 	for (var k = 0; k < playersClient.length; k++) { // on boucle sur tous les joueurs
 		//if(playersClient[k].pseudo != pseudo ){  // on dessine sauf si c'est nous
@@ -223,10 +249,13 @@ function emitTail() {
 	}	
 }
 
-function playersReady(playerId){
-	for (var k = 0; k < playersClient.length; k++) { // jouerus par joueurs on remplie leur tail[] avec les données reçues
-		if(playersClient[k].id == playerId ){  //on ajoute les données  au joueur qui correspond
+function playerReady(playerId){  // permet seulement de savoir quand qq est prêt et modifier sa div
+	for (var k = 0; k < playersClient.length; k++) { 
+		if(playersClient[k].id == playerId ){ 
+			var div1 = select("#player"+playersClient[k].id);
+			div1.addClass('playerReady');
 			playersClient[k].start = true ;
+			console.log(playersClient[k].pseudo+" est prêt !");
 		}
 	}	
 }

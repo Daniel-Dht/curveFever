@@ -21,7 +21,10 @@
 
   <body>
     <h1> Curve Fucker © </h1>
-    <button id="startGame"> start </button>
+    <div id="startDiv">
+      <i id = 'çapart?' >Quand tous le monde dit ça part, ça part !</i>
+      <button id="startGame"> ça part ! </button>
+    </div>
     <hr>
     <div id="container">
         <div id="sketch-holder">
@@ -37,6 +40,8 @@
     <hr>
     <button id="reStartGame"> restart </button>
     
+    <p id="countDown"> R </p>
+
   </body>
 
   <style>
@@ -72,6 +77,10 @@
       font-weight: bold;
       color : white;
     }
+    i, p
+    {
+      color : white;
+    }
     h1
     {
       font-size: 50px;
@@ -89,15 +98,27 @@
       color : black;
       text-align: center;
       vertical-align: middle;
-       
+
     }
     .mainPlayer{
       margin-left: 50px;
+    }
+    .playerReady 
+    {
+      border:solid;
+      border-color: #EFD242 ;
+      border-width: 5px;
     }
     #sketch-holder
     {
       min-width: 600px; /* ces valeurs doivent celle du canvas */
       min-height: 400px;
+    }
+    button 
+    {
+      border-radius : 3px ;
+      padding-left: 4px;
+      padding-right: 4px;
     }
 
   </style>
