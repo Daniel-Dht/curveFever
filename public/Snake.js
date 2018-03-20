@@ -15,7 +15,7 @@ function Snake() {
 
 	this.goNewHole = true ;
 	this.goDrawHole = false ;
-	this.holeSize = 12;
+	this.holeSize = 20;
 	this.hole = 0;
 	this.minSpaceBetweenHoles = 50 ;
 
@@ -88,7 +88,9 @@ function Snake() {
 
 	this.displayHead = function() { // la tête est de qualité, la queue moins pour performance and smooth driving
 		strokeWeight(this.thickness);
-		stroke(0,0,0);			
+		stroke(0,0,0);	
+		if(typeof this.color !='undefined') stroke(this.color) ;
+				
 		//console.log("ok : "+this.tail[0]+" , "+this.tail[1]);
 		//console.log("ok : "+frameCount+" voila : "+this.tail[0]+" , "+this.tail[1]+", head.length :"+this.head.length );
 
@@ -159,8 +161,9 @@ function Snake() {
 		var mindist = this.thickness/2-0.5;
 		for(k=0 ; k<this.tail.length-this.sizeHead-this.thickness; k ++) {					
 			if(  this.tail[k] && dist(this.x,this.y,this.tail[k][0],this.tail[k][1]) < mindist  ) {
-				this.vect.setMag(0); // le serpent n'avance plus
+				//this.vect.setMag(0); // le serpent n'avance plus
 				alive = false;
+				this.tempDifference = []  ; // pour ne pas renvoyer de données inutiles après la mort
 			}
 		}
 		

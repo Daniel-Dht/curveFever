@@ -3,8 +3,6 @@ var player1 ; // Vous même
 
 var socket;
 
-//var tailCopie = [] ;
-
 var playersClient = [] ; // liste de tous les joueurs connectés
 
 var temp = 0; // trouver comment s'en passer si possible
@@ -13,6 +11,9 @@ var pseudo ; // pseudo de cette session
 var alive = true ;
 var start = false ;
 var idClient = Math.floor(1000*Math.random());
+
+var showRestartButton = false;
+var reStartButton ; 
 
 function setup() {
 	var canvas = createCanvas(600, 400);
@@ -26,21 +27,27 @@ function setup() {
 	socket.on('tailOfOfAll', treatReceivedDataTail); // on reçoit les données des tail de tous
 	socket.on('playerReady', playersReady ); 
 	socket.on('beforeStart', treatReceivedDataHead); // avant la partie
-	socket.on('restartGame', newGame);
+	socket.on('restartGame', restartAGame);
 	
 
-	var testButton = select('#test'); // boutton pour commencer à dessiner le serpent
-	testButton.mousePressed(function() {
+	var startButton = select('#startGame'); // boutton pour commencer à dessiner le serpent
+	startButton.mousePressed(function() {
 		start = true;
 		socket.emit('playerReady');
-		//socket.emit('deathOfPlayer');
 	});	
+	reStartButton = select('#reStartGame');
+	reStartButton.mousePressed(function() {
+		newGame();
+		showRestartButton = false;
+	});
 }
 
 
 function draw() {
 	background(200);
 	onConnection() ;
+	if(!showRestartButton) reStartButton.hide() ;
+	if(showRestartButton) reStartButton.show() ;
 
 	if(alive && start) {
 		player1.vect.setMag(player1.v);
@@ -53,7 +60,7 @@ function draw() {
 		deathManager(); // par rapport aux autres
 		emitTail(); // on envoit nos données au serveur
 		noFill();
-		stroke(player1.color);
+		if(typeof player1.color !='undefined') stroke(player1.color);
 		strokeWeight(6);
 		rect(0,0,width,height);
 	} 
@@ -73,13 +80,8 @@ function draw() {
 		socket.emit('beforeStart', [player1.x,player1.y]);	 
 		drawPointOfAll();
 
-		strokeWeight(2);
-		stroke(0);
-		player1.vect.setMag(50);
-		line(player1.x,  player1.y,  player1.vect.x+player1.x,  player1.vect.y+player1.y)
-
-		player1.x += player1.vect.x/25 ;
-		player1.y += player1.vect.y/25 ;
+		player1.x += player1.vect.x ;
+		player1.y += player1.vect.y ;
 		player1.borderManagerAtStart();
 
 		if(typeof player1.color !='undefined'){  
@@ -94,10 +96,21 @@ function draw() {
 
 }
 
-function newGame(players) {
-	playersClient = players ;
+function restartAGame() {
+	// utile car implaçable dans le socket.on
+	showRestartButton = true ;
+}
+
+function newGame() {
+	for (var k = 0; k < playersClient.length; k++) { 	 
+		playersClient[k].tail = [];
+	}	
+	//playersClient = players ; // les joueurs ont été réinit de la même manière coté serveur
+	player1.tail = [];
+	player1.head= [] ;
 	alive = true ;
-	start = true;
+	start = false;
+	console.log('nouvelle partie !');
 }
 
 function drawPointOfAll(){
@@ -113,9 +126,20 @@ function displayListOfPlayer() { // affiche les joueurs dans une div
 	for (var i = 0; i < playersClient.length; i++) {
 		var divCheck = select("#player"+playersClient[i].id);
 		if( divCheck == null) { // on créé la div que si elle n'existe pas
-			var div1 = createDiv('Player : '+playersClient[i].pseudo+", id : "+playersClient[i].id);
+			var div1 = createDiv(playersClient[i].pseudo+"  (id : "+playersClient[i].id+")");
 			div1.parent('playerList'); // use id
 			div1.id("player"+playersClient[i].id);
+			div1.style('padding','5px');
+			if(typeof playersClient[i] !='undefined') {
+				div1.style('background-color', playersClient[i].color);
+				div1.style('border-radius',' 5px') ;
+				div1.style('margin',' 10px') ;
+				div1.style('width',' 100%') ;
+				//div1.style('color', playersClient[i].color);
+			} else {
+				div1.style('color', '#fffff');
+			}
+
 		}
 	}
 }
@@ -141,16 +165,16 @@ function deathManager() {
 
 			for(k=0 ; k < playersClient[i].tail.length; k ++) {	
 				if( playersClient[i].tail[k] && dist(player1.x,player1.y, playersClient[i].tail[k][0],playersClient[i].tail[k][1]) < mindist  ) {
-					player1.vect.setMag(0); // le serpent n'avance plus
+					//player1.vect.setMag(0); // le serpent n'avance plus
 					//socket.emit('deathOfPlayer'); // wtf ce bout de code marche aps ici
 					alive = false;
+					player1.tempDifference = []  ;
 				}
 			}
 		}
 	}
 	if(!alive) socket.emit('deathOfPlayer');
 }
-
 
 function onConnection() {
 	if(co) { // inutile sauf pour le emit j'ai l'impression
@@ -170,13 +194,12 @@ function onConnection() {
 	}	
 }
 
-
 function drawTailOfAllPlayer() { // ou de tous, surement mieux
 
 	for (var k = 0; k < playersClient.length; k++) { // on boucle sur tous les joueurs
 		//if(playersClient[k].pseudo != pseudo ){  // on dessine sauf si c'est nous
 		stroke(playersClient[k].color);	
-		if( playersClient[k].tail.length > 1 ){
+		if( playersClient[k].tail.length > 2 ){
 			for(j = 0 ; j<playersClient[k].tail.length-1  ; j++){ // puis on affiche la tête			
 
 				strokeWeight(8);
@@ -225,6 +248,7 @@ function treatReceivedDataHead(dataXYid) {
 
 			playersClient[k].x = dataXYid[0];
 			playersClient[k].y = dataXYid[1];
+			//console.log(playersClient[k].x);
 		}
 	}	
 }

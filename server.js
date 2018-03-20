@@ -68,16 +68,14 @@ io.sockets.on('connection',
 
     socket.on('tailTabEmit',
     	function(data) {
-
     		for (var index = 0; index < players.length; index++) { 
     			if( players[index].id == socket.id) {
-    				//console.log(data);
     				for (var i = 0; i < data.length; i++) {
-    					players[index].tail.push(data[i]);
+    					players[index].tail.push(data[i]);         
     				}
     				socket.broadcast.emit('tailOfOfAll',[data,players[index].id]);
     			}
-    		}
+    		}         
     	}
     );
 
@@ -85,7 +83,7 @@ io.sockets.on('connection',
     	for (var index = 0; index < players.length; index++) { 
 			if( players[index].id == socket.id) {
 				players[index].dead = true ;
-				//checkIfEveryoneIsDead();
+				checkIfEveryoneIsDead();
 			}
     	}
     });
@@ -111,13 +109,18 @@ function checkIfEveryoneIsDead() {
 	for (var i = 0; i < players.length; i++) {
 		if(players[i].dead) count ++ ;
 	}
-	if( count == players.length ) clearTails()
+	if( count == players.length ){
+		clearTails() ;
+		console.log('all dead')
+	} 
 
 }
 
 function clearTails() {
 	for (var i = 0; i < players.length; i++) {
 		players[i].tail = [] ;
+		players[i].start = false ;
+		players[i].dead = false ;
 	}
 	io.emit('restartGame', players);
 }
