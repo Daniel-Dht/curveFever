@@ -17,10 +17,14 @@ var showStartButton = true;
 var reStartButton ; 
 var startButton ; 
 
+var thicknessMalusOn = false ;
+var thicknessMalusPos ;
+
+
 function setup() {
 	var canvas = createCanvas(600, 400);
 	canvas.parent('sketch-holder'); // on place le canvas dans la div 
-	background(200);
+	background(220);
 	socket = io.connect();
 	pseudo = prompt('Quel est votre pseudo ?');
 	player1 = new Snake(); // vous
@@ -34,9 +38,23 @@ function setup() {
 	socket.on('heartbeat', function(count){
 		console.log("heartbeat : " +count);
 		var div = select("#countDown");
-		div.html(5-count);
-
+		div.html(3-count);
 	});
+	socket.on('thicknessMalus', function(dataXY){
+		thicknessMalusPos = dataXY ;
+		console.log("malus "+dataXY);
+		thicknessMalusOn = true ;
+	}) ;
+	socket.on('malusHit', function(data){ // data = [x,y,id]
+		thicknessMalusOn = false ;
+		for (var i = 0; i < playersClient.length; i++) {
+			//console.log("playersClient.idClient != data[2] :: "+ )
+			if(playersClient[i].idClient != data[2]) {
+				playersClient[i].thicknessTab.push(data[0],data[1]);
+			}
+		}
+		console.log("malus detected 222");
+	}) ;
 
 	startButton = select('#startGame'); // boutton pour commencer à dessiner le serpent
 	startButton.mousePressed(startButtonAction ) ;
@@ -47,8 +65,12 @@ function setup() {
 
 
 function draw() {
-	background(200);
+	background(220);
 	onConnection() ;
+	if(thicknessMalusOn){
+		drawThicknessMalus() ;
+		detectMalus();
+	} 
 	if(showStartButton) {
 		if (keyIsDown(13)) startButtonAction(); // appuyer sur Entré = activé le bouton
 	}
@@ -74,7 +96,7 @@ function draw() {
 		rect(0,0,width,height); // quand la partie est en cours
 	} 
 	if(!alive) {
-		
+		noFill();
 		stroke(player1.color);
 		strokeWeight(6);
 		rect(0,0,width,height);
@@ -102,6 +124,21 @@ function draw() {
 	}
 
 	drawTailOfAllPlayer() ; 
+}
+
+function detectMalus() { // a traiter version orienté serveyr cad utilisé playerClient plutot que player1
+	minDist = dist(thicknessMalusPos[0], thicknessMalusPos[1], player1.x, player1.y );
+	if(minDist < 30){
+		socket.emit('malusHit', idClient);
+		console.log("malus detected");	
+	} 
+}
+
+function drawThicknessMalus() {
+	strokeWeight(1);
+	stroke(0);
+	fill(100,100,255);
+	ellipse(thicknessMalusPos[0],thicknessMalusPos[1],30,30);
 }
 
 function startButtonAction() {
@@ -193,8 +230,7 @@ function deathManager() {
 
 			for(k=0 ; k < playersClient[i].tail.length; k ++) {	
 				if( playersClient[i].tail[k] && dist(player1.x,player1.y, playersClient[i].tail[k][0],playersClient[i].tail[k][1]) < mindist  ) {
-					//player1.vect.setMag(0); // le serpent n'avance plus
-					//socket.emit('deathOfPlayer'); // wtf ce bout de code marche aps ici
+
 					alive = false;
 					player1.tempDifference = []  ;
 				}
@@ -229,9 +265,13 @@ function drawTailOfAllPlayer() {
 		//if(playersClient[k].pseudo != pseudo ){  // on dessine sauf si c'est nous
 		stroke(playersClient[k].color);	
 		if( playersClient[k].tail.length > 2 ){
-			for(j = 0 ; j<playersClient[k].tail.length-1  ; j++){ // puis on affiche la tête			
+			for(j = 0 ; j<playersClient[k].tail.length-1  ; j++){ // puis on affiche la tête		
 
-				strokeWeight(8);
+				strokeWeight(playersClient[k].thickness);
+				if(checkIfThick(j, playersClient[k].thicknessTab)) {
+					strokeWeight(playersClient[k].thickness+8);	
+				}
+
 			 	line(playersClient[k].tail[j][0],playersClient[k].tail[j][1],playersClient[k].tail[j+1][0],playersClient[k].tail[j+1][1]  );
 			 	// noStroke();
 			 	// fill(255,100,80);
@@ -285,6 +325,13 @@ function treatReceivedDataHead(dataXYid) {
 	}	
 }
 
+function checkIfThick(index,thicknessTab) {
+	for (var i = 0; i < thicknessTab.length-1; i+=2) {
+		if(thicknessTab[i] < index && index < thicknessTab[i+1]) {
+			return true;
+		}
+	}
+}
 
 
 

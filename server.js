@@ -13,8 +13,12 @@ var heartbeats = require('heartbeats'); // permet de gérer le temps
 
 var id = 0;
 var players = [] ; // liste des joueurs
-var colors = ['#DB0A0A','#06A50E','#FF8E05','#053BFF','#FF02EE','#02FFE5','#FFFF02'];
+// var colors = ['#DB0A0A','#06A50E','#FF8E05','#053BFF','#FF02EE','#02FFE5','#FFFF02'];
+var colors = ['#851433','#BC3262','#F9B86C','#E44D29','#EC8D29','#FF6563','#79B299','#8E9091','#D9AAB9','#8A9D5C'];
 var countDownBeforeNewGame = 500;
+
+var gameOn = false ;
+var thicknessMalusOn = false ;
 
 function Player(id, idClient, pseudo) { // objet joueur coté serveur
 	this.id = id;
@@ -24,6 +28,9 @@ function Player(id, idClient, pseudo) { // objet joueur coté serveur
 	this.start = false ;
 	this.color = pickColor() ;
 	this.dead = false ;
+    this.thickness = 8; // 8 = default
+    this.thicknessTab = [] ; // test
+    this.score = 0; // aa traiter
 
 }
 
@@ -70,7 +77,7 @@ io.sockets.on('connection',
     	}
     );
 
-    socket.on('tailTabEmit',
+    socket.on('tailTabEmit', // AUSSI GESTION DES MALUS
     	function(data) {
     		for (var index = 0; index < players.length; index++) { 
     			if( players[index].id == socket.id) {
@@ -79,9 +86,23 @@ io.sockets.on('connection',
     				}
     				socket.broadcast.emit('tailOfOfAll',[data,players[index].id]);
     			}
-    		}         
+    		}     
+            if(gameOn && !thicknessMalusOn ) emitThicknessMalus()  ;    
     	}
     );
+
+    socket.on('malusHit', function(idOftheSender) {
+        if (players.length != 0) { 
+            data = [players[0].tail.length, players[0].tail.length+200] ;
+            for (var i = 0; i < players.length; i++) {
+                if( players[i].id != socket.id) {
+                    players[i].thicknessTab.push(data[0],data[1]);
+                }
+            }
+            socket.broadcast.emit('malusHit', [data[0],data[1],idOftheSender]);
+            //console.log("malus detecté coté server");
+        }
+    });
 
     socket.on('deathOfPlayer', function() {
     	for (var index = 0; index < players.length; index++) { 
@@ -112,6 +133,17 @@ io.sockets.on('connection',
 
 });
 
+function emitThicknessMalus() { // envois les index de tail concernés par le malus
+    //var chance = getRandomInt(1000);
+    if(1) {
+        var x = getRandomInt(600);
+        var y = getRandomInt(400);
+        console.log('MAlus'+x+" "+y);
+        io.emit('thicknessMalus',[x,y]) ;
+        thicknessMalusOn = true;            // A REMETTRE EN FALSE
+    }
+}
+
 function checkIfEveryoneIsReady() { // Heartbeats !! dinguerie !!
     var count = 0;
     for (var i = 0; i < players.length; i++) {
@@ -121,13 +153,14 @@ function checkIfEveryoneIsReady() { // Heartbeats !! dinguerie !!
         console.log('all ready')    
 
         var heart = heartbeats.createHeart(1000); // 1000 => 1s
-        heart.createEvent(1, {countTo: 5}, function(count, last){
+        heart.createEvent(1, {countTo: 3}, function(count, last){
             //console.log('...Every Single Beat for 3 beats only');
             io.emit('heartbeat',count);
             if(last === true){
                 //console.log('...the last time.')
                 io.emit('everyoneReady'); // on fait partir la game à la fin du décompte !
                 heart.kill();
+                gameOn = true ;
             }           
         });
     } 
@@ -137,6 +170,7 @@ function checkIfEveryoneIsDead() {
 	var count = 0;
 	for (var i = 0; i < players.length; i++) {
 		if(players[i].dead) count ++ ;
+
 	}
 	if( count == players.length ){
 		clearTails() ;
@@ -150,6 +184,7 @@ function clearTails() {
 		players[i].start = false ;
 		players[i].dead = false ;
 	}
+    gameOn = false ;
 	io.emit('restartGame',players);
 }
 
