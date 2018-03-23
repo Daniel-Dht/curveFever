@@ -24,6 +24,7 @@ function Snake() {
 	this.lineScaleCount = this.lineScale;
 	this.sizeHead = 5; // taille de la partie qu'on dessine avec la qualité max
 	this.thickness = 8; // epaisseur de serpent
+	this.thicknessTab = [] ;
 
 	this.tempDifference = [];
 
@@ -64,19 +65,22 @@ function Snake() {
 
 	this.holeManager = function() {
 
+		
 		if(this.goNewHole && this.tail.length > (this.sizeHead + this.hole) ){
 			if (random(1)>0.990 ) {
 
 				this.goDrawHole = true ;
 				this.hole = this.holeSize ;
 
-				append(this.tail,false);
+				append(this.tail,false); //console.log('hole !  (x = '+this.x+' ; y = '+this.y)
 				append(this.tempDifference,false);
 
 				this.goNewHole=false;
 				this.minSpaceBetweenHoles =50;
 			}	
 		} 
+		
+
 		if(this.goDrawHole){
 			this.hole -=1;
 			if(this.hole == 0) this.goDrawHole = false;
@@ -92,20 +96,12 @@ function Snake() {
 		stroke(0,0,0);	
 		if(typeof this.color !='undefined') stroke(this.color) ;
 				
-		//console.log("ok : "+this.tail[0]+" , "+this.tail[1]);
-		//console.log("ok : "+frameCount+" voila : "+this.tail[0]+" , "+this.tail[1]+", head.length :"+this.head.length );
-
 		if(this.head.length > 2){
 
 			for(k = 0 ; k<this.head.length-1 ; k++){ // on affiche la tête
 				line(this.head[k][0], this.head[k][1], this.head[k+1][0], this.head[k+1][1]);
 			}
 			
-			
-			// for(k = 0 ; k<this.tail.length-1  ; k++){ // puis on affiche la queue
-			// 	stroke(242,100,80);	
-			// 	line(this.tail[k][0],this.tail[k][1],this.tail[k+1][0],this.tail[k+1][1]);		
-			// }
 		}
 	}
 
@@ -116,51 +112,67 @@ function Snake() {
 		if( this.x > width){
 			this.head[this.head.length-1] = false ;
 
-			this.tail[this.tail.length-1][0] = width ;
-			append(this.tail, false);
-			append(this.tail, [ 0 , this.tail[this.tail.length-2][1] ]);
-			append(this.tempDifference, false);
-			append(this.tempDifference, [ 0 , this.tail[this.tail.length-3][1] ]);
-			//console.log(this.tail);
+			if(!this.goDrawHole) {  
+
+				this.tail[this.tail.length-1][0] = width ;
+				append(this.tail, false);
+				append(this.tail, [ 0 , this.tail[this.tail.length-2][1] ]);
+
+				append(this.tempDifference, false); // on copie la partie à envoyer au serveur
+				append(this.tempDifference, [ 0 , this.tail[this.tail.length-3][1] ]);
+			}
 			this.x = 0;
 		}  
 		if( this.x < 0) {
 			this.head[this.head.length-1] = false ;
 
-			this.tail[this.tail.length-1][0] = 0 ;
-			append(this.tail, false);
-			append(this.tail, [ width , this.tail[this.tail.length-2][1] ]);
-			append(this.tempDifference, false);
-			append(this.tempDifference, [ width , this.tail[this.tail.length-3][1] ]);
+			if(!this.goDrawHole) { 
+				this.tail[this.tail.length-1][0] = 0 ;
+				append(this.tail, false);
+				append(this.tail, [ width , this.tail[this.tail.length-2][1] ]);
+
+				append(this.tempDifference, false);
+				append(this.tempDifference, [ width , this.tail[this.tail.length-3][1] ]);
+			}
+
 			this.x = width;
 		}
 		if( this.y > height) {
 			this.head[this.head.length-1] = false ;
 
-			this.tail[this.tail.length-1][1] = height ;
-			append(this.tail, false);
-			append(this.tail, [ this.tail[this.tail.length-2][0] ,0]);
-			append(this.tempDifference, false);
-			append(this.tempDifference, [ this.tail[this.tail.length-3][0] ,0]);
+			if(!this.goDrawHole) { 
+				this.tail[this.tail.length-1][1] = height ;
+				append(this.tail, false);
+				append(this.tail, [ this.tail[this.tail.length-2][0] ,0]);
+				append(this.tempDifference, false);
+				append(this.tempDifference, [ this.tail[this.tail.length-3][0] ,0]);
+			}
 
 			this.y = 0;
 		}
 		if( this.y < 0) {
 	    	this.head[this.head.length-1] = false ;
 
-			this.tail[this.tail.length-1][1] = 0 ;
-			append(this.tail, false);
-			append(this.tail, [ this.tail[this.tail.length-2][0],height ]);
-			append(this.tempDifference, false);
-			append(this.tempDifference, [ this.tail[this.tail.length-3][0],height ]);
+	    	if(!this.goDrawHole) { 	
+				this.tail[this.tail.length-1][1] = 0 ;
+				append(this.tail, false);
+				append(this.tail, [ this.tail[this.tail.length-2][0],height ]);
+				append(this.tempDifference, false);
+				append(this.tempDifference, [ this.tail[this.tail.length-3][0],height ]);
+			}
 			this.y = height;
 		}
 	}
 
 
 	this.deathManager = function() {
-		var mindist = this.thickness/2-0.5;
-		for(k=0 ; k<this.tail.length-this.sizeHead-this.thickness; k ++) {					
+		var mindist = 8-0.5;
+		for(k=0 ; k<this.tail.length-this.sizeHead-this.thickness; k ++) {		
+
+			// mindist = 8-0.5; 
+			// if(checkIfThick(k, this.tail[k].thicknessTab) ) mindist += 4 ; // si la tail qu'on check est épaisse
+			// if(checkIfThick(player1.tail.length, player1.thicknessTab) ) mindist += 4 ; // 	
+
 			if(  this.tail[k] && dist(this.x,this.y,this.tail[k][0],this.tail[k][1]) < mindist  ) {
 				//this.vect.setMag(0); // le serpent n'avance plus
 				alive = false;

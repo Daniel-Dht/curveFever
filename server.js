@@ -31,7 +31,6 @@ function Player(id, idClient, pseudo) { // objet joueur coté serveur
     this.thickness = 8; // 8 = default
     this.thicknessTab = [] ; // test
     this.score = 0; // aa traiter
-
 }
 
 io.sockets.on('connection', 
@@ -93,7 +92,7 @@ io.sockets.on('connection',
 
     socket.on('malusHit', function(idOftheSender) {
         if (players.length != 0) { 
-            data = [players[0].tail.length, players[0].tail.length+200] ;
+            data = [players[0].tail.length, players[0].tail.length+100] ;
             for (var i = 0; i < players.length; i++) {
                 if( players[i].id != socket.id) {
                     players[i].thicknessTab.push(data[0],data[1]);
@@ -105,9 +104,15 @@ io.sockets.on('connection',
     });
 
     socket.on('deathOfPlayer', function() {
+        var countScore = 0;
+        for (var i = 0; i < players.length; i++) { // on compte le nb de joueur déja mort pour donner un score
+            if(players[i].dead) countScore ++ ;
+        }
+
     	for (var index = 0; index < players.length; index++) { 
 			if( players[index].id == socket.id) {
 				players[index].dead = true ;
+                players[index].score += countScore ;
 				checkIfEveryoneIsDead();
 			}
     	}
@@ -133,14 +138,20 @@ io.sockets.on('connection',
 
 });
 
-function emitThicknessMalus() { // envois les index de tail concernés par le malus
-    //var chance = getRandomInt(1000);
-    if(1) {
+function emitThicknessMalus() { // émet la coordonnée du malus
+    var chance = getRandomInt(1000);
+    if(chance < 500) {
         var x = getRandomInt(600);
         var y = getRandomInt(400);
-        console.log('MAlus'+x+" "+y);
+        console.log('Malus'+x+" "+y);
         io.emit('thicknessMalus',[x,y]) ;
-        thicknessMalusOn = true;            // A REMETTRE EN FALSE
+        thicknessMalusOn = true;
+        var heart = heartbeats.createHeart(1000); // on attend 15 secondes avant un nouveau malus
+        heart.createEvent(1, {countTo: 15}, function(count, last){
+            if(last === true){
+                thicknessMalusOn = false ;
+            }           
+        });           
     }
 }
 
@@ -169,22 +180,41 @@ function checkIfEveryoneIsReady() { // Heartbeats !! dinguerie !!
 function checkIfEveryoneIsDead() {
 	var count = 0;
 	for (var i = 0; i < players.length; i++) {
-		if(players[i].dead) count ++ ;
-
+		if(players[i].dead) count ++ ;  // on compte les morts pour savoir si la partie est finie
 	}
-	if( count == players.length ){
-		clearTails() ;
+    
+	if( count == players.length-1 ){   // la partie finis si il reste 1 joueur vivant seul, !!! attention bug due à lenteur (si tt le monde est mort)
 		console.log('all dead')
+        for (var i = 0; i < players.length; i++) {
+            if(! players[i].dead) players[i].score += players.length; // on donne le max de point au dernier vivant
+        }
+
+        var heart = heartbeats.createHeart(1000); // on attend 3 secondes avant une nouvelle game
+        heart.createEvent(1, {countTo: 5}, function(count, last){
+            if(last === true)  prepNextGame() ; 
+        });  
 	} 
+
+    if( players.length == 1 && players[0].dead ){ // si 1 seul joueur
+        var heart = heartbeats.createHeart(1000); // on attend 3 secondes avant une nouvelle game
+        heart.createEvent(1, {countTo: 3}, function(count, last){
+        players[0].score +=1;
+            if(last === true) {
+                prepNextGame() ;  
+            }              
+        }); 
+    }
 }
 
-function clearTails() { 
+function prepNextGame() { 
 	for (var i = 0; i < players.length; i++) {
 		players[i].tail = [] ;
+        players[i].thicknessTab = [] ;
 		players[i].start = false ;
 		players[i].dead = false ;
 	}
     gameOn = false ;
+    thicknessMalusOn = false ;
 	io.emit('restartGame',players);
 }
 

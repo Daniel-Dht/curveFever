@@ -33,10 +33,10 @@ function setup() {
 	socket.on('tailOfOfAll', treatReceivedDataTail); // on reçoit les données des tail de tous
 	socket.on('playerReady', playerReady ); // permet seulement de savoir quand qq est prêt et modifier sa div
 	socket.on('beforeStart', treatReceivedDataHead); // avant la partie
-	socket.on('restartGame', function(){showRestartButton = true});
+	socket.on('restartGame', initForNewGame);
 	socket.on('everyoneReady', startGame) ;
 	socket.on('heartbeat', function(count){
-		console.log("heartbeat : " +count);
+		//console.log("heartbeat : " +count);
 		var div = select("#countDown");
 		div.html(3-count);
 	});
@@ -45,22 +45,22 @@ function setup() {
 		console.log("malus "+dataXY);
 		thicknessMalusOn = true ;
 	}) ;
-	socket.on('malusHit', function(data){ // data = [x,y,id]
+	socket.on('malusHit', function(data){ // data = [x,y,idOfMalusSender]
 		thicknessMalusOn = false ;
 		for (var i = 0; i < playersClient.length; i++) {
 			//console.log("playersClient.idClient != data[2] :: "+ )
 			if(playersClient[i].idClient != data[2]) {
 				playersClient[i].thicknessTab.push(data[0],data[1]);
+				if(playersClient[i].idClient == idClient) player1.thicknessTab.push(data[0],data[1]); // coté client
 			}
 		}
-		console.log("malus detected 222");
 	}) ;
 
 	startButton = select('#startGame'); // boutton pour commencer à dessiner le serpent
 	startButton.mousePressed(startButtonAction ) ;
 
-	reStartButton = select('#reStartGame'); // bouton pour recommencer une partie
-	reStartButton.mousePressed(reStartButtonAction );
+	// reStartButton = select('#reStartGame'); // bouton pour recommencer une partie
+	// reStartButton.mousePressed(reStartButtonAction );
 }
 
 
@@ -74,11 +74,11 @@ function draw() {
 	if(showStartButton) {
 		if (keyIsDown(13)) startButtonAction(); // appuyer sur Entré = activé le bouton
 	}
-	if(!showRestartButton) reStartButton.hide() ;
-	if(showRestartButton) {
-		reStartButton.show() ;
-		if (keyIsDown(13)) reStartButtonAction(); // appuyer sur Entré = activé le bouton
-	}
+	// if(!showRestartButton) reStartButton.hide() ;
+	// if(showRestartButton) {
+	// 	reStartButton.show() ;
+	// 	if (keyIsDown(13)) reStartButtonAction(); // appuyer sur Entré = activé le bouton
+	
 
 	if(alive && start) {
 		player1.vect.setMag(player1.v);
@@ -130,7 +130,7 @@ function detectMalus() { // a traiter version orienté serveyr cad utilisé play
 	minDist = dist(thicknessMalusPos[0], thicknessMalusPos[1], player1.x, player1.y );
 	if(minDist < 30){
 		socket.emit('malusHit', idClient);
-		console.log("malus detected");	
+		console.log("malus hit");	
 	} 
 }
 
@@ -152,6 +152,7 @@ function reStartButtonAction(){
 	initForNewGame();
 	showRestartButton = false;
 	showStartButton = true ;
+	thicknessMalusOn = false ;
 	var div = select('#startDiv');
 	div.show();
 }
@@ -164,16 +165,32 @@ function startGame() {
 	start = true ;
 }
 
-function initForNewGame() {
-	for (var k = 0; k < playersClient.length; k++) { 	 
-		playersClient[k].tail = [];
-	}	
-	//playersClient = players ; // les joueurs ont été réinit de la même manière coté serveur
+function initForNewGame(players) {
+	// for (var k = 0; k < playersClient.length; k++) { 	 
+	// 	playersClient[k].tail = [];
+	// 	playersClient[k].thicknessTab = [];
+	// }	
+	showRestartButton = false;
+	showStartButton = true ;
+	thicknessMalusOn = false ;
+	var div = select('#startDiv');
+	div.show();
+
+
+	playersClient = players ; // les joueurs ont été réinit de la même manière coté serveur
 	player1.tail = [];
 	player1.head= [] ;
+	player1.thicknessTab = [] ;
 	alive = true ;
 	start = false;
+
+	for (var i = 0; i < playersClient.length; i++) {
+		var divCheck = select("#player"+playersClient[i].id);
+		divCheck.html(playersClient[i].pseudo +" "+playersClient[i].score) ;
+	}
+
 	console.log('nouvelle partie !');
+
 }
 
 function drawPointOfAll(){
@@ -223,13 +240,19 @@ function disconnexionManager() {
 	});	
 }
 
-function deathManager() { 
-	var mindist = player1.thickness;  // ATTENTION THICKNESS & HEAD
-	for (var i = 0; i < playersClient.length; i++) {
-		if(playersClient[i].pseudo != pseudo && playersClient[i].tail.length>2) { // si c'est ps nous ATTENTION PSEUDO ET ID
+function deathManager() {  // la distance minimale est la somme des deux moitiés des épaisseurs des deux serpents considérés
 
-			for(k=0 ; k < playersClient[i].tail.length; k ++) {	
-				if( playersClient[i].tail[k] && dist(player1.x,player1.y, playersClient[i].tail[k][0],playersClient[i].tail[k][1]) < mindist  ) {
+	var mindist ; // distance minimale de base, sans malus du coté des deux serpents 
+	for (var i = 0; i < playersClient.length; i++) {
+
+		if(playersClient[i].pseudo != pseudo && playersClient[i].tail.length>2) { // si c'est ps nous ATTENTION PSEUDO ET ID
+			for(k=0 ; k < playersClient[i].tail.length; k ++) {	 // on boucle sur la tail 
+
+				mindist = player1.thickness; 
+				if(checkIfThick(k, playersClient[i].thicknessTab) ) mindist += 4 ; // si la tail qu'on check est épaisse
+				if(checkIfThick(player1.tail.length, player1.thicknessTab) ) mindist += 4 ; // 
+
+				if( playersClient[i].tail[k] && dist(player1.x,player1.y, playersClient[i].tail[k][0],playersClient[i].tail[k][1]) < mindist-0.5  ) {
 
 					alive = false;
 					player1.tempDifference = []  ;
@@ -262,7 +285,6 @@ function onConnection() {
 function drawTailOfAllPlayer() { 
 
 	for (var k = 0; k < playersClient.length; k++) { // on boucle sur tous les joueurs
-		//if(playersClient[k].pseudo != pseudo ){  // on dessine sauf si c'est nous
 		stroke(playersClient[k].color);	
 		if( playersClient[k].tail.length > 2 ){
 			for(j = 0 ; j<playersClient[k].tail.length-1  ; j++){ // puis on affiche la tête		
