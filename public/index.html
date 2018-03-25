@@ -16,8 +16,11 @@
 
   </head>
 
+  
 
   <body>
+    <!-- <img id="swag" src="images/swag.png"></img> -->
+
     <h1> Curve Fucker © </h1>
     <div id="startDiv">
       <i id = 'çapart?' >Quand tous le monde dit ça part, ça part !</i>
@@ -30,7 +33,7 @@
         </div>
 
         <div id="playerList"> 
-          <h3> Joueurs connectés : </h3>
+          <h3 id="titleListPlayer"> Joueurs connectés : </h3>
           <!-- The players will go here! -->
         </div>
     </div>
@@ -47,14 +50,16 @@
     }
     body 
     {
+      margin : 0;
       height:100vh;
       background-color: rgb(40,40,40) ;
-      margin-left: 10%; 
-      margin-right: 10%; 
-      padding-left: 10%;
-      padding-top: 20px;
+      margin-left: 10% ; 
+      margin-right: 10% ;
+
+      padding-left: 10% ;
+      padding-top: 20px ;
       padding-right: 10%;
-      /*margin: 2;*/
+
     }
     canvas {vertical-align: top;}
     #container
@@ -65,12 +70,16 @@
     }
     #playerList
     {
+
       padding-left: 5%;
     }
     h3, h1
     {
       font-weight: bold;
       color : white;
+    }
+    #titleListPlayer {
+      padding-left: 50px; 
     }
     i, p
     {
@@ -151,6 +160,15 @@
       float :right;
       padding-left: 3px;
       padding-right : 3px;
+    } 
+    #swag  {
+      width :280px;
+      height: auto;
+      /*float :right;
+      float:top;*/
+      position: fixed;
+      right: 10%;
+      top: 0;
     } ​
 
 

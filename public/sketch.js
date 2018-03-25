@@ -1,4 +1,9 @@
 
+var onConnexionSong ;
+function preload() {
+	onConnexionSong = loadSound('sound/onConnection.mp3');
+}
+
 var player1 ; // Vous même
 
 var socket;
@@ -20,8 +25,16 @@ var thicknessMalusPos ;
 
 var countDown = -1 ; //countDown quand tt le monde est près
 
+var bonusSong ;
+var gameOverSong ;
+var startSong ;
+
 function setup() {
-	var canvas = createCanvas(600, 400);
+	var canvas = createCanvas(800, 600);
+	bonusSong = loadSound('sound/bonus.mp3');
+	gameOverSong = loadSound('sound/gameOver.mp3');
+	startSong = loadSound('sound/start.mp3');
+	// onConnexionSong = loadSound('sound/onConnexion.mp3');
 
 	canvas.parent('sketch-holder'); // on place le canvas dans la div 
 	background(220);
@@ -149,6 +162,7 @@ function startButtonAction() {
 	socket.emit('playerReady');
 	var div = select('#startDiv');
 	div.hide(); 
+	startSong.play();
 }
 
 function startGame() {
@@ -201,8 +215,8 @@ function drawPointOfAll(){
 	noStroke();
 	
 	for (var k = 0; k < playersClient.length; k++) { 	
-		fill(playersClient[k].color);			
-		ellipse(playersClient[k].x , playersClient[k].y ,8,8);
+		fill(playersClient[k].color);				
+		ellipse(playersClient[k].x , playersClient[k].y ,10,10);
 	}		
 }
 
@@ -218,13 +232,13 @@ function displayListOfPlayer() { // affiche les joueurs dans une div
 
 			var imDead = createImg("images/playerDeathImage.png");
 			imDead.addClass('imgDeadPlayer');
-			imDead.parent("playerMainDiv"+playersClient[i].id); 
+		 	imDead.parent("playerMainDiv"+playersClient[i].id); 
 			imDead.id("playerDeathImage"+playersClient[i].id);
 			imDead.hide();
 
 			var crown = createImg("images/crown.png");
 			crown.addClass('imgDeadPlayer'); // même classe que la t^te de mort
-			crown.parent("playerMainDiv"+playersClient[i].id); 
+			// crown.parent("playerMainDiv"+playersClient[i].id); 
 			crown.id("crownedPlayer"+playersClient[i].id);
 			crown.hide();
 
@@ -233,7 +247,8 @@ function displayListOfPlayer() { // affiche les joueurs dans une div
 			div1.id("player"+playersClient[i].id);
 			div1.addClass('player');
 			div1.addClass('flexClass1');
-
+			
+			crown.parent("player"+playersClient[i].id); 
 
 			var div2 = createDiv('0'); // div du score
 			div2.parent("playerMainDiv"+playersClient[i].id); 
@@ -289,7 +304,10 @@ function deathManager() {  // la distance minimale est la somme des deux moitié
 			}
 		}
 	}
-	if(!alive) socket.emit('deathOfPlayer');
+	if(!alive) {
+		socket.emit('deathOfPlayer');
+		gameOverSong.play();
+	}
 }
 
 function onConnection() {
@@ -300,6 +318,7 @@ function onConnection() {
 			console.log("un joueur s'est connecté ("+players[players.length-1].pseudo+")");
 			playersClient = players ; //players est la liste de jouerus du serveurs 
 			displayListOfPlayer();
+			onConnexionSong.play();
 			for (var k = 0; k < playersClient.length; k++) { 
 				if( playersClient[k].idClient==idClient){ 
 					player1.color = playersClient[k].color ;
