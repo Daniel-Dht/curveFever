@@ -12,9 +12,7 @@ var alive = true ;
 var start = false ;
 var idClient = Math.floor(10000*Math.random());
 
-var showRestartButton = false;
 var showStartButton = true;
-var reStartButton ; 
 var startButton ; 
 
 var thicknessMalusOn = false ;
@@ -49,18 +47,24 @@ function setup() {
 		thicknessMalusOn = false ;
 		for (var i = 0; i < playersClient.length; i++) {
 			//console.log("playersClient.idClient != data[2] :: "+ )
-			if(playersClient[i].idClient != data[2]) {
+			if(playersClient[i].idClient != data[2] && !playersClient[i].dead) {
 				playersClient[i].thicknessTab.push(data[0],data[1]);
 				if(playersClient[i].idClient == idClient) player1.thicknessTab.push(data[0],data[1]); // coté client
 			}
 		}
 	}) ;
+	socket.on('deathOfPlayer', function(id) {
+		for (var i = 0; i < playersClient.length; i++) {
+			if(playersClient[i].id == id)  {
+				var divOfDeadPlayer = select("#playerMainDiv"+playersClient[i].id);
+				divOfDeadPlayer.addClass('deadPlayer');
+			}
+		}
+	});
 
 	startButton = select('#startGame'); // boutton pour commencer à dessiner le serpent
 	startButton.mousePressed(startButtonAction ) ;
 
-	// reStartButton = select('#reStartGame'); // bouton pour recommencer une partie
-	// reStartButton.mousePressed(reStartButtonAction );
 }
 
 
@@ -73,12 +77,7 @@ function draw() {
 	} 
 	if(showStartButton) {
 		if (keyIsDown(13)) startButtonAction(); // appuyer sur Entré = activé le bouton
-	}
-	// if(!showRestartButton) reStartButton.hide() ;
-	// if(showRestartButton) {
-	// 	reStartButton.show() ;
-	// 	if (keyIsDown(13)) reStartButtonAction(); // appuyer sur Entré = activé le bouton
-	
+	}	
 
 	if(alive && start) {
 		player1.vect.setMag(player1.v);
@@ -90,10 +89,6 @@ function draw() {
 		player1.deathManager();	// par rapport à nous
 		deathManager(); // par rapport aux autres
 		emitTail(); // on envoit nos données au serveur
-		noFill();
-		if(typeof player1.color !='undefined') stroke(player1.color);
-		strokeWeight(6);
-		rect(0,0,width,height); // quand la partie est en cours
 	} 
 	if(!alive) {
 		noFill();
@@ -114,13 +109,6 @@ function draw() {
 		player1.x += player1.vect.x ;
 		player1.y += player1.vect.y ;
 		player1.borderManagerAtStart();
-
-		if(typeof player1.color !='undefined'){  
-			noFill();
-			stroke(player1.color);
-			strokeWeight(6);
-			rect(0,0,width,height);
-		}
 	}
 
 	drawTailOfAllPlayer() ; 
@@ -148,15 +136,6 @@ function startButtonAction() {
 	div.hide(); 
 }
 
-function reStartButtonAction(){
-	initForNewGame();
-	showRestartButton = false;
-	showStartButton = true ;
-	thicknessMalusOn = false ;
-	var div = select('#startDiv');
-	div.show();
-}
-
 function startGame() {
 	for (var k = 0; k < playersClient.length; k++) { // jouerus par joueurs on remplie leur tail[] avec les données reçues
 		var div1 = select("#player"+playersClient[k].id);
@@ -166,11 +145,10 @@ function startGame() {
 }
 
 function initForNewGame(players) {
-	// for (var k = 0; k < playersClient.length; k++) { 	 
-	// 	playersClient[k].tail = [];
-	// 	playersClient[k].thicknessTab = [];
-	// }	
-	showRestartButton = false;
+
+	console.log("For debuging : ");
+	console.log(players);
+
 	showStartButton = true ;
 	thicknessMalusOn = false ;
 	var div = select('#startDiv');
@@ -185,8 +163,11 @@ function initForNewGame(players) {
 	start = false;
 
 	for (var i = 0; i < playersClient.length; i++) {
-		var divCheck = select("#player"+playersClient[i].id);
-		divCheck.html(playersClient[i].pseudo +" "+playersClient[i].score) ;
+		var divOfDeadPlayer = select("#playerMainDiv"+playersClient[i].id);
+		divOfDeadPlayer.removeClass('deadPlayer');
+
+		var divScore = select("#playerScore"+playersClient[i].id);
+		divScore.html(playersClient[i].score) ;
 	}
 
 	console.log('nouvelle partie !');
@@ -206,18 +187,29 @@ function displayListOfPlayer() { // affiche les joueurs dans une div
 	for (var i = 0; i < playersClient.length; i++) {
 		var divCheck = select("#player"+playersClient[i].id);
 		if( divCheck == null) { // on créé la div que si elle n'existe pas
-			var div1 = createDiv(playersClient[i].pseudo);
-			div1.parent('playerList'); // use id
+
+			var divMain = createDiv('');   // div contenant la div  du pseudo et celle du score
+			divMain.id("playerMainDiv"+playersClient[i].id);
+			divMain.parent('playerList'); // use id
+			divMain.addClass('flexClass1');
+
+			var div1 = createDiv(playersClient[i].pseudo);  // div du pseudo
+			div1.parent("playerMainDiv"+playersClient[i].id); 
 			div1.id("player"+playersClient[i].id);
 			div1.addClass('player');
+
+			var div2 = createDiv('0'); // div du score
+			div2.parent("playerMainDiv"+playersClient[i].id); 
+			div2.id("playerScore"+playersClient[i].id);
+			div2.addClass('scoreDiv');			
+
 			if(playersClient[i].idClient == idClient ){
-				div1.addClass('mainPlayer') ;
-				//console.log('ok');
+				divMain.addClass('mainPlayer') ;        // on décale la div qui concerne le client
 			} 
 
 			if(typeof playersClient[i] !='undefined') {
 				div1.style('background-color', playersClient[i].color);
-				//div1.style('color', playersClient[i].color);
+				div2.style('background-color', playersClient[i].color);
 			} else {
 				div1.style('color', '#fffff');
 			}
@@ -230,7 +222,7 @@ function disconnexionManager() {
 	socket.on('messageDisconnect', function(dataID) { // quand qq se déco, on l'enlève de la liste
 		for (var i = 0; i < playersClient.length; i++) {
 			if(playersClient[i].id == dataID ){
-				var divToRemove = select("#player"+playersClient[i].id);
+				var divToRemove = select("#playerMainDiv"+playersClient[i].id);
 				console.log(playersClient[i].pseudo+" s'est déco, c'est le client qui le dit !");
 				playersClient.splice(i,1);
 				//console.log(playersClient);
@@ -275,6 +267,9 @@ function onConnection() {
 				if( playersClient[k].idClient==idClient){ 
 					player1.color = playersClient[k].color ;
 					pseudo = playersClient[k].pseudo ;
+
+					var sketchHolder = select('#sketch-holder');
+					sketchHolder.style('border-color',player1.color);
 				}
 			}
 		});

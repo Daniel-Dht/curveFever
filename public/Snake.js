@@ -12,7 +12,7 @@ function Snake() {
 	this.head  = [];
 	this.tail  = [];
 	this.goTail = true;
-	this.angle =  0.05;
+	this.angle =  0.08;
 
 	this.goNewHole = true ;
 	this.goDrawHole = false ;
