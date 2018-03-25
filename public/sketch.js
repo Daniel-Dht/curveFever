@@ -18,9 +18,11 @@ var startButton ;
 var thicknessMalusOn = false ;
 var thicknessMalusPos ;
 
+var countDown = -1 ; //countDown quand tt le monde est près
 
 function setup() {
 	var canvas = createCanvas(600, 400);
+
 	canvas.parent('sketch-holder'); // on place le canvas dans la div 
 	background(220);
 	socket = io.connect();
@@ -34,9 +36,8 @@ function setup() {
 	socket.on('restartGame', initForNewGame);
 	socket.on('everyoneReady', startGame) ;
 	socket.on('heartbeat', function(count){
-		//console.log("heartbeat : " +count);
-		var div = select("#countDown");
-		div.html(3-count);
+		if( count == 1 ) countDown = 6 ; // 1 de moins que le décompte serveur
+		countDown -- ;
 	});
 	socket.on('thicknessMalus', function(dataXY){
 		thicknessMalusPos = dataXY ;
@@ -56,8 +57,11 @@ function setup() {
 	socket.on('deathOfPlayer', function(id) {
 		for (var i = 0; i < playersClient.length; i++) {
 			if(playersClient[i].id == id)  {
-				var divOfDeadPlayer = select("#playerMainDiv"+playersClient[i].id);
+				var divOfDeadPlayer = select("#player"+playersClient[i].id);
 				divOfDeadPlayer.addClass('deadPlayer');
+
+				var imgOfDeadPlayer = select("#playerDeathImage"+playersClient[i].id);
+				imgOfDeadPlayer.show();
 			}
 		}
 	});
@@ -67,9 +71,9 @@ function setup() {
 
 }
 
-
 function draw() {
 	background(220);
+	goCountDown();
 	onConnection() ;
 	if(thicknessMalusOn){
 		drawThicknessMalus() ;
@@ -114,6 +118,17 @@ function draw() {
 	drawTailOfAllPlayer() ; 
 }
 
+function goCountDown() {
+	if(countDown > 0 && typeof player1.color !='undefined') {
+		textAlign(CENTER, CENTER);
+		textSize(100);
+		strokeWeight(4);
+		stroke(player1.color);
+		fill(player1.color);
+		text(countDown, width/2, height/2);
+	}
+}
+
 function detectMalus() { // a traiter version orienté serveyr cad utilisé playerClient plutot que player1
 	minDist = dist(thicknessMalusPos[0], thicknessMalusPos[1], player1.x, player1.y );
 	if(minDist < 30){
@@ -154,7 +169,6 @@ function initForNewGame(players) {
 	var div = select('#startDiv');
 	div.show();
 
-
 	playersClient = players ; // les joueurs ont été réinit de la même manière coté serveur
 	player1.tail = [];
 	player1.head= [] ;
@@ -162,12 +176,21 @@ function initForNewGame(players) {
 	alive = true ;
 	start = false;
 
-	for (var i = 0; i < playersClient.length; i++) {
-		var divOfDeadPlayer = select("#playerMainDiv"+playersClient[i].id);
+	for (var i = 0; i < playersClient.length; i++) { // Gestion de la liste de joueurs
+		var divOfDeadPlayer = select("#player"+playersClient[i].id);
 		divOfDeadPlayer.removeClass('deadPlayer');
+
+		var imgOfDeadPlayer = select("#playerDeathImage"+playersClient[i].id);
+		imgOfDeadPlayer.hide();
 
 		var divScore = select("#playerScore"+playersClient[i].id);
 		divScore.html(playersClient[i].score) ;
+
+		var crownDiv = select("#crownedPlayer"+playersClient[i].id);
+		if( playersClient[i].leader) crownDiv.show();			
+		if( !playersClient[i].leader) crownDiv.hide();
+		
+
 	}
 
 	console.log('nouvelle partie !');
@@ -193,10 +216,24 @@ function displayListOfPlayer() { // affiche les joueurs dans une div
 			divMain.parent('playerList'); // use id
 			divMain.addClass('flexClass1');
 
+			var imDead = createImg("images/playerDeathImage.png");
+			imDead.addClass('imgDeadPlayer');
+			imDead.parent("playerMainDiv"+playersClient[i].id); 
+			imDead.id("playerDeathImage"+playersClient[i].id);
+			imDead.hide();
+
+			var crown = createImg("images/crown.png");
+			crown.addClass('imgDeadPlayer'); // même classe que la t^te de mort
+			crown.parent("playerMainDiv"+playersClient[i].id); 
+			crown.id("crownedPlayer"+playersClient[i].id);
+			crown.hide();
+
 			var div1 = createDiv(playersClient[i].pseudo);  // div du pseudo
 			div1.parent("playerMainDiv"+playersClient[i].id); 
 			div1.id("player"+playersClient[i].id);
 			div1.addClass('player');
+			div1.addClass('flexClass1');
+
 
 			var div2 = createDiv('0'); // div du score
 			div2.parent("playerMainDiv"+playersClient[i].id); 

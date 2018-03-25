@@ -33,6 +33,7 @@ function Player(id, idClient, pseudo) { // objet joueur coté serveur
     this.thickness = 8; // 8 = default
     this.thicknessTab = [] ; // test
     this.score = 0; // aa traiter
+    this.leader = false ;
 }
 
 io.sockets.on('connection', 
@@ -166,7 +167,7 @@ function checkIfEveryoneIsReady() { // Heartbeats !! dinguerie !!
         console.log('all ready')    
 
         var heart = heartbeats.createHeart(1000); // 1000 => 1s
-        heart.createEvent(1, {countTo: 3}, function(count, last){
+        heart.createEvent(1, {countTo: 6}, function(count, last){ 
             //console.log('...Every Single Beat for 3 beats only');
             io.emit('heartbeat',count);
             if(last === true){
@@ -196,7 +197,7 @@ function checkIfEveryoneIsDead() {
     if( players.length == 1 ){ // si 1 seul joueur
         var heart = heartbeats.createHeart(1000); // on attend 3 secondes avant une nouvelle game
         heart.createEvent(1, {countTo: 3}, function(count, last){
-            if(last === true) {
+            if(last === true && typeof( players[0]) !== "undifined" ) {
                 players[0].score ++ ;
                 prepNextGame() ;  
             }              
@@ -204,8 +205,35 @@ function checkIfEveryoneIsDead() {
     }
 }
 
+function findBestPlayer() {
+    var bestScore = 0 ;
+    var idOfBests = [] ;
+
+    for (var i = 0; i < players.length; i++) {
+        if (players[i].score >bestScore) {
+            bestScore = players[i].score ;
+            idOfBests = [players[i].id] ;
+            console.log(players[i].id +' debug0, bestScore: '+bestScore);
+            console.log(players[i].id+' debug0, idOfBests: '+idOfBests);
+        }
+        if (players[i].score == bestScore) {
+            idOfBests.push(players[i].id) ;
+            console.log(players[i].id +' debug1, bestScore: '+bestScore);
+            console.log(players[i].id+' debug1, idOfBests: '+idOfBests);
+        }
+    }
+    return idOfBests ;
+}
+
 function prepNextGame() { 
+    var idOfBests = findBestPlayer() ;
 	for (var i = 0; i < players.length; i++) {
+        if ( idOfBests.includes(players[i].id))  {
+            players[i].leader = true ;
+        } else {
+            players[i].leader = false ;
+        }
+
 		players[i].tail = [] ;
         players[i].thicknessTab = [] ;
 		players[i].start = false ;
