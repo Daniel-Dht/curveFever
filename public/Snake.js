@@ -1,3 +1,5 @@
+
+
 function Snake() {
 
 	this.x = random(width);;
@@ -20,7 +22,7 @@ function Snake() {
 	this.hole = 0;
 	this.minSpaceBetweenHoles = 50 ;
 
-	this.lineScale = 1; //1 = min = meilleur qualité, plus on augmente moins c'est quali
+	this.lineScale = 2; //1 = min = meilleur qualité, plus on augmente moins c'est quali
 	this.lineScaleCount = this.lineScale;
 	this.sizeHead = 5; // taille de la partie qu'on dessine avec la qualité max
 	this.thickness = 8; // epaisseur de serpent

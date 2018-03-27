@@ -213,13 +213,13 @@ function findBestPlayer() {
         if (players[i].score >bestScore) {
             bestScore = players[i].score ;
             idOfBests = [players[i].id] ;
-            console.log(players[i].id +' debug0, bestScore: '+bestScore);
-            console.log(players[i].id+' debug0, idOfBests: '+idOfBests);
+            // console.log(players[i].id +' debug0, bestScore: '+bestScore);
+            // console.log(players[i].id+' debug0, idOfBests: '+idOfBests);
         }
         if (players[i].score == bestScore) {
             idOfBests.push(players[i].id) ;
-            console.log(players[i].id +' debug1, bestScore: '+bestScore);
-            console.log(players[i].id+' debug1, idOfBests: '+idOfBests);
+            // console.log(players[i].id +' debug1, bestScore: '+bestScore);
+            // console.log(players[i].id+' debug1, idOfBests: '+idOfBests);
         }
     }
     return idOfBests ;

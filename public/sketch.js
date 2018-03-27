@@ -28,12 +28,21 @@ var countDown = -1 ; //countDown quand tt le monde est près
 var bonusSong ;
 var gameOverSong ;
 var startSong ;
+var beepSong ;
+var beepSongStart ;
+var malusSong ; ;
+var malusHitSong;
 
 function setup() {
 	var canvas = createCanvas(800, 600);
+	malusSong = loadSound('sound/malus.mp3');
+	malusHitSong = loadSound('sound/malusHit.mp3');
+	beepSongStart = loadSound('sound/beep2.mp3');
+	beepSong = loadSound('sound/beep1.mp3');
 	bonusSong = loadSound('sound/bonus.mp3');
 	gameOverSong = loadSound('sound/gameOver.mp3');
 	startSong = loadSound('sound/start.mp3');
+	backgroundSong = loadSound('sound/backgroundSong.mp3');
 	// onConnexionSong = loadSound('sound/onConnexion.mp3');
 
 	canvas.parent('sketch-holder'); // on place le canvas dans la div 
@@ -49,8 +58,16 @@ function setup() {
 	socket.on('restartGame', initForNewGame);
 	socket.on('everyoneReady', startGame) ;
 	socket.on('heartbeat', function(count){
-		if( count == 1 ) countDown = 6 ; // 1 de moins que le décompte serveur
-		countDown -- ;
+		if( count == 1 ) countDown = 6 ; // 1 de moins que le décompte serveur		
+		if( countDown == 1 ){
+			// beepSong.rate(0.5);
+			beepSongStart.play(0,1,0.8,0,0.5);
+		} else {
+			beepSong.rate(0.5);
+			beepSong.setVolume(0.4);
+			beepSong.play();
+		}
+		countDown -- ;	
 	});
 	socket.on('thicknessMalus', function(dataXY){
 		thicknessMalusPos = dataXY ;
@@ -58,14 +75,18 @@ function setup() {
 		thicknessMalusOn = true ;
 	}) ;
 	socket.on('malusHit', function(data){ // data = [x,y,idOfMalusSender]
-		thicknessMalusOn = false ;
+		thicknessMalusOn = false ;		
 		for (var i = 0; i < playersClient.length; i++) {
-			//console.log("playersClient.idClient != data[2] :: "+ )
 			if(playersClient[i].idClient != data[2] && !playersClient[i].dead) {
 				playersClient[i].thicknessTab.push(data[0],data[1]);
 				if(playersClient[i].idClient == idClient) player1.thicknessTab.push(data[0],data[1]); // coté client
 			}
 		}
+		malusSong.setVolume(3);
+		malusHitSong.setVolume(3);
+		if(idClient != data[2]) malusSong.play();
+		else malusHitSong.play();
+
 	}) ;
 	socket.on('deathOfPlayer', function(id) {
 		for (var i = 0; i < playersClient.length; i++) {
@@ -85,6 +106,7 @@ function setup() {
 }
 
 function draw() {
+
 	background(220);
 	goCountDown();
 	onConnection() ;
@@ -97,6 +119,7 @@ function draw() {
 	}	
 
 	if(alive && start) {
+		if(backgroundSong.isLoaded() && !backgroundSong.isPlaying()) backgroundSong.play() ;
 		player1.vect.setMag(player1.v);
 		player1.controlKey();
 		player1.shiftHead();
@@ -108,6 +131,7 @@ function draw() {
 		emitTail(); // on envoit nos données au serveur
 	} 
 	if(!alive) {
+		if(backgroundSong.isLoaded() && backgroundSong.isPlaying()) backgroundSong.stop() ;
 		noFill();
 		stroke(player1.color);
 		strokeWeight(6);
